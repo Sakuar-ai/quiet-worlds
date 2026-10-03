@@ -7,7 +7,7 @@
     <meta name="description" content="A hand-drawn ambient sound prototype where you adjust the world." />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='none' stroke='%23396b9c' stroke-linecap='round' stroke-width='5' d='M16 30c7-12 25-12 32 0M21 40c5 7 17 7 22 0M28 18l4-5 4 5'/%3E%3C/svg%3E" />
     <title>Quiet Worlds — ambient sound</title>
-    <link rel="stylesheet" href="./styles.css?v=rain-refined-4" />
+    <link rel="stylesheet" href="./styles.css?v=phase2a-2" />
   </head>
   <body>
     <main class="app-shell" aria-label="Quiet Worlds ambient sound player">
@@ -61,7 +61,7 @@
         <button class="scrim" data-close-sheet aria-label="Close environment picker"></button>
         <div class="sheet-panel">
           <div class="sheet-handle" aria-hidden="true"></div>
-          <p class="sheet-kicker">Choose a world</p>
+          <p class="sheet-kicker">Choose a World</p>
           <div id="scene-list" class="scene-list"></div>
         </div>
       </section>
@@ -80,6 +80,7 @@
             <input id="keep-awake-toggle" type="checkbox" />
           </label>
           <p class="sound-credit">Rain recordings: <a href="https://freesound.org/people/InspectorJ/sounds/401277/" target="_blank" rel="noopener noreferrer">Rain, Moderate, A</a> and <a href="https://freesound.org/people/InspectorJ/sounds/401275/" target="_blank" rel="noopener noreferrer">C</a> by <a href="https://www.jshaw.co.uk/" target="_blank" rel="noopener noreferrer">InspectorJ</a> / Freesound, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Excerpts looped, level-matched and filtered.</p>
+          <p id="fireplace-credit" class="sound-credit" hidden>Fireplace: <a href="https://bigsoundbank.com/feu-de-cheminee-4-s2856.html" target="_blank" rel="noopener noreferrer">Fireplace #4</a> by Joseph SARDIN / BigSoundBank, <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>. Three excerpts of a real recording, looped and blended; low rumbles filtered and sharp peaks softened for sustained, gentle crackling.</p>
         </div>
       </section>
 
@@ -105,6 +106,6 @@
 
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>
-    <script type="module" src="./app.js?v=rain-refined-4"></script>
+    <script type="module" src="./app.js?v=phase2a-2"></script>
   </body>
 </html>

@@ -1,3 +1,6 @@
+import { FireplaceRenderer, fireMix } from './fireplace.js?v=phase2a-2';
+import { worldArt, FIRE_MARK } from './world-art.js?v=phase2a-2';
+
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;
 const ease = (value) => value * value * (3 - 2 * value);
@@ -27,14 +30,14 @@ const SCENES = {
     ]
   },
   fireplace: {
-    id: "fireplace", name: "Fireplace", mark: "♨", accent: "#c56747", initialIntensity: .42,
+    id: "fireplace", name: "Fireplace", mark: "♨", accent: "#b65332", initialIntensity: .42,
     labels: ["Embers", "Roaring Fire"], whisper: "Warmth with nowhere else to be.",
-    descriptions: ["A few embers are breathing.", "The fire is warming the room.", "The logs are speaking brightly."],
+    descriptions: ["A few embers are breathing.", "The fire is gently unfolding.", "The logs are speaking brightly."],
     aria: "A simple hand-drawn brick fireplace with small moving flames",
     audio: [
-      { label: "embers", kind: "noise", frequency: 340, q: 1.1, gain: .038 },
-      { label: "fire crackle", kind: "noise", frequency: 1200, q: .8, gain: .042 },
-      { label: "deep fire", kind: "noise", frequency: 150, q: .5, gain: .048 }
+      { label: "soft ember body", kind: "recording", url: "./audio/fireplace-steady.mp3", start: 6, duration: 29, profile: "soft-fire", lowCut: 220, highCut: 1800, gain: .85 },
+      { label: "gentle wood crackle", kind: "recording", url: "./audio/fireplace-steady.mp3", start: 22, duration: 31, profile: "soft-fire", lowCut: 500, highCut: 5400, gain: .7 },
+      { label: "full steady fire", kind: "recording", url: "./audio/fireplace-steady.mp3", start: 38, duration: 37, profile: "soft-fire", lowCut: 220, highCut: 6200, gain: .75 }
     ]
   },
   forest: {
@@ -74,7 +77,7 @@ const SCENES = {
 
 const MARKS = {
   rain: `<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M8.8 20.3C4.5 21 2.6 18.6 3.5 15.4c.7-2.8 3.2-4 5.8-3.4-.3-3.4 2.4-6.6 6-6.2 1 .1 2 .5 2.8 1.1C19.2 3.2 22.4 1.3 26 2.5c3 1 4.1 4 3.4 6.9 2.5-1.5 5.6-1.1 6.7 1.5 1.5 3.4-.8 6.8-4.5 7.6"/><path d="m14.5 18.7-1.9 4.5m10.7-6.5-2.1 4.6m6.6 1.9-1.7 4m-8.3-1.7-1.7 4"/></svg>`,
-  fireplace: `<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M20 3c2.8 4-1.2 6.5 2.1 9.2 1.2-2 4.7-3 4.8-7.2 4.9 5.1 5.2 14.8-1.2 20H14.2c-6.1-5.5-4.3-15.1 1.6-19.3.1 4 1.8 5.3 4.2 6.7C18.8 8.9 20.4 6 20 3Z"/></svg>`,
+  fireplace: FIRE_MARK,
   forest: `<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M10 25V13M5 17l5-10 5 10M4 22h12M26 25V9M21 14l5-10 5 10M20 19h12"/></svg>`,
   ocean: `<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M3 18c5 0 6-8 12-8 6 0 6 8 12 8 5 0 6-5 10-5M4 23c5 0 6-3 11-3s6 3 11 3 7-3 11-3"/></svg>`,
   snow: `<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M20 3v24M9.6 9l20.8 12M30.4 9 9.6 21M16.5 5l3.5 3 3.5-3M16.5 25l3.5-3 3.5 3M7 13l4 1-1 4M33 13l-4 1 1 4"/></svg>`
@@ -85,6 +88,7 @@ class SceneRenderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d", { alpha: true });
     this.scene = new Scene(SCENES.rain);
+    this.fireplace = new FireplaceRenderer(canvas.parentElement);
     this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.bounds = { width: 0, height: 0, dpr: 1 };
     this.start = performance.now();
@@ -107,7 +111,16 @@ class SceneRenderer {
   }
 
   setScene(config) {
+    if (this.scene.config.id !== config.id && this.bounds.width && this.bounds.height) {
+      // One transient outgoing canvas, not a pre-rendered animation or frame sequence.
+      const snapshot = document.createElement('canvas');
+      snapshot.width = this.canvas.width; snapshot.height = this.canvas.height;
+      snapshot.getContext('2d').drawImage(this.canvas, 0, 0);
+      this.transition = { snapshot, start: performance.now() };
+    }
     this.scene = new Scene(config);
+    this.fireplace.setVisible(config.id === 'fireplace');
+    this.canvas.setAttribute('aria-hidden', String(config.id === 'fireplace'));
     this.canvas.setAttribute("aria-label", config.aria);
   }
 
@@ -122,11 +135,16 @@ class SceneRenderer {
     const pace = this.reducedMotion ? .22 : 1;
     const t = ((now - this.start) / 1000) * pace;
     const { id } = this.scene.config;
+    const fade = this.transition ? clamp((now - this.transition.start) / 450) : 1;
+    ctx.save(); ctx.globalAlpha = fade;
     if (id === "rain") this.drawRain(ctx, w, h, t);
-    if (id === "fireplace") this.drawFireplace(ctx, w, h, t);
+    if (id === "fireplace") this.fireplace.update(now / 1000, this.scene.intensity, this.reducedMotion);
     if (id === "forest") this.drawForest(ctx, w, h, t);
     if (id === "ocean") this.drawOcean(ctx, w, h, t);
     if (id === "snow") this.drawSnow(ctx, w, h, t);
+    ctx.restore();
+    if (this.transition && fade < 1) { ctx.save(); ctx.globalAlpha = 1 - fade; ctx.drawImage(this.transition.snapshot, 0, 0, w, h); ctx.restore(); }
+    else this.transition = null;
     this.frame = requestAnimationFrame(this.render);
   }
 
@@ -234,46 +252,6 @@ class SceneRenderer {
     }
   }
 
-  drawFireplace(ctx, w, h, t) {
-    const i = this.scene.intensity;
-    const brick = "#bd765b", brickPale = "#dca88c", coal = "#5f4135", flame = "#efa43c", light = "#ffd86b";
-    const base = h * .79, left = w*.13, right = w*.87, top = h*.43;
-    // Hearth, drawn as an open arch with a few visible bricks only.
-    this.line(ctx, [[left, base], [right, base]], brick, 1.8, .75);
-    this.line(ctx, [[left+5, base], [left+5, top+47], [left+20, top+20]], brick, 1.7, .76);
-    this.curve(ctx, [left+20, top+20], [[w*.31, top-4, w*.69, top-4, right-20, top+20]], brick, 1.7, .78);
-    this.line(ctx, [[right-20, top+20], [right-5, top+47], [right-5, base]], brick, 1.7, .76);
-    this.fillPath(ctx, [[left+18, base-4], [left+18, top+51], [left+31, top+31], [right-31, top+31], [right-18, top+51], [right-18, base-4]], "#8c5846", .16);
-    for (let row = 0; row < 4; row++) {
-      const y = base + 7 + row*15;
-      for (let col = 0; col < 5; col++) {
-        const x = left-3 + col * ((right-left+6)/5) + (row%2?7:0);
-        this.line(ctx, [[x+2,y], [x+22,y-1], [x+25,y+9], [x+4,y+10]], brickPale, .8, .5);
-      }
-    }
-    for (let row = 0; row < 3; row++) {
-      const y = top+23+row*18;
-      this.line(ctx, [[left+8,y], [left+27,y-6]], brickPale, .85, .48);
-      this.line(ctx, [[right-8,y], [right-27,y-6]], brickPale, .85, .48);
-    }
-    // Logs.
-    ctx.save(); ctx.translate(w*.5, base-13); ctx.rotate(-.10); ctx.globalAlpha=.9; ctx.strokeStyle=coal; ctx.lineWidth=8; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(-w*.17, 4); ctx.lineTo(w*.2,-2); ctx.stroke(); ctx.restore();
-    ctx.save(); ctx.translate(w*.5, base-14); ctx.rotate(.25); ctx.globalAlpha=.8; ctx.strokeStyle="#765142"; ctx.lineWidth=7; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(-w*.14, -2); ctx.lineTo(w*.15,3); ctx.stroke(); ctx.restore();
-    const fireHeight = lerp(h*.13, h*.31, i);
-    const flameCount = 3 + Math.floor(i * 5);
-    for (let f = 0; f < flameCount; f++) {
-      const fx = w * (.34 + f/(flameCount-1)*.32) + Math.sin(t*2.1+f*7)*5*(.4+i);
-      const fh = fireHeight * (.53 + (f%4)*.13 + wave(t*(1.1+i*1.5)+f)*.16);
-      const bottom = base-16;
-      ctx.save(); ctx.globalAlpha = .69; ctx.fillStyle = f%3 ? flame : light; ctx.beginPath(); ctx.moveTo(fx-10,bottom); ctx.bezierCurveTo(fx-17,bottom-fh*.33,fx-4,bottom-fh*.65,fx+Math.sin(t+f)*5,bottom-fh); ctx.bezierCurveTo(fx+13,bottom-fh*.53,fx+16,bottom-fh*.24,fx+10,bottom); ctx.closePath(); ctx.fill(); ctx.restore();
-    }
-    const sparks = Math.floor(i*16);
-    for (let s=0; s<sparks; s++) {
-      const progress=(t*(.19+i*.58)+s*.187)%1; const x=w*(.33+((s*17)%100)/100*.34)+Math.sin(t*2+s)*9; const y=base-33-progress*(h*.24+i*h*.08);
-      ctx.save(); ctx.globalAlpha=(1-progress)*.75; ctx.fillStyle=flame; ctx.beginPath(); ctx.arc(x,y,1.1+(s%3)*.35,0,Math.PI*2);ctx.fill();ctx.restore();
-    }
-  }
-
   drawForest(ctx, w, h, t) {
     const i = this.scene.intensity;
     const green="#557d65", light="#8baa85", trunk="#766154", ground="#7e9d7d";
@@ -339,6 +317,7 @@ class AudioMixer {
     this.layers = [];
     this.isPlaying = false;
     this.buffers = new Map();
+    this.recordings = new Map();
     this.request = 0;
     this.intensity = .36;
   }
@@ -348,7 +327,7 @@ class AudioMixer {
     if (!this.context) this.createContext();
     await this.context.resume();
     if(this.currentScene!==scene.config.id){
-      const buffers=await Promise.all(scene.config.audio.map(layer=>layer.kind==="recording"?this.loadRecording(layer.url):null));
+      const buffers=await Promise.all(scene.config.audio.map(layer=>layer.kind==="recording"?this.loadRecording(layer.url,layer):null));
       if(request!==this.request) return false;
       this.buildScene(scene.config,buffers);
     }
@@ -377,20 +356,28 @@ class AudioMixer {
 
   buildScene(config, buffers=[]) {
     if (!this.context) return;
-    this.layers.forEach(({ source, gain }) => { gain.gain.setValueAtTime(0, this.context.currentTime); source.stop(this.context.currentTime + .08); });
+    const oldBus = this.sceneBus;
+    if (oldBus) { oldBus.gain.setTargetAtTime(0, this.context.currentTime, .12); setTimeout(() => oldBus.disconnect(), 2200); }
+    this.layers.forEach(({ source }) => source.stop(this.context.currentTime + 2));
+    this.sceneBus = this.context.createGain(); this.sceneBus.gain.value = 0; this.sceneBus.connect(this.master);
     this.layers = config.audio.map((layer,index) => layer.kind==="recording"?this.createRecordingLayer(layer,buffers[index]):this.createNoiseLayer(layer));
+    this.sceneBus.gain.setTargetAtTime(1, this.context.currentTime, .2);
     this.currentScene = config.id;
   }
 
-  async loadRecording(url) {
-    if(!this.buffers.has(url)) {
+  async loadRecording(url, options = {}) {
+    const key = `${url}:${options.start ?? 8}:${options.duration ?? 36}:${options.profile ?? 'rain'}`;
+    if(!this.buffers.has(key)) {
       const loading=(async()=>{
-        const response=await fetch(url);
-        if(!response.ok)throw new Error("Rain recording could not be loaded");
-        const original=await this.context.decodeAudioData(await response.arrayBuffer());
+        if (!this.recordings.has(url)) {
+          const decoded = fetch(url).then(response => { if (!response.ok) throw new Error('Recording could not be loaded'); return response.arrayBuffer(); }).then(bytes => this.context.decodeAudioData(bytes));
+          this.recordings.set(url, decoded);
+          decoded.catch(() => this.recordings.delete(url));
+        }
+        const original=await this.recordings.get(url);
         const rate=original.sampleRate, fade=Math.round(rate*1.8);
-        const start=Math.round(rate*8), length=Math.min(Math.round(rate*36),original.length-start-fade);
-        if(length<fade*2)throw new Error("Rain recording is too short");
+        const start=Math.round(rate*(options.start ?? 8)), length=Math.min(Math.round(rate*(options.duration ?? 36)),original.length-start-fade);
+        if(length<fade*2)throw new Error("Recording is too short");
         const loop=this.context.createBuffer(original.numberOfChannels,length,rate);
         let power=0;
         for(let ch=0;ch<original.numberOfChannels;ch++){
@@ -401,29 +388,44 @@ class AudioMixer {
             output[n]=value;power+=value*value;
           }
         }
+        if(options.profile === 'soft-fire') {
+          // Two gentle high-pass stages remove handling/low-end knocks before
+          // normalization. Warm the filter with one loop to avoid a startup edge.
+          power=0;
+          const alpha=1-Math.exp(-2*Math.PI*180/rate);
+          for(let ch=0;ch<loop.numberOfChannels;ch++) {
+            const samples=loop.getChannelData(ch); let low1=0,low2=0;
+            for(let pass=0;pass<2;pass++) for(let n=0;n<length;n++) {
+              const value=samples[n];low1+=alpha*(value-low1);
+              const high=value-low1;low2+=alpha*(high-low2);
+              if(pass===1) { samples[n]=high-low2; power+=samples[n]*samples[n]; }
+            }
+          }
+        }
         const rms=Math.sqrt(power/(length*original.numberOfChannels));
-        const gain=.13/Math.max(rms,.0001);
+        const gain=(options.profile === 'soft-fire' ? .12 : .13)/Math.max(rms,.0001);
+        const ceiling=options.profile === 'soft-fire' ? .24 : .72;
         // Soften isolated close-mic impacts without turning the entire rain bed down.
         for(let ch=0;ch<loop.numberOfChannels;ch++){
           const samples=loop.getChannelData(ch);
-          for(let n=0;n<samples.length;n++)samples[n]=.72*Math.tanh(samples[n]*gain/.72);
+          for(let n=0;n<samples.length;n++)samples[n]=ceiling*Math.tanh(samples[n]*gain/ceiling);
           const bridge=Math.round(rate*.002);
           for(let n=0;n<bridge;n++){const p=n/(bridge-1),blend=p*p*(3-2*p),index=samples.length-bridge+n;samples[index]=samples[index]*(1-blend)+samples[0]*blend;}
         }
         return loop;
       })();
-      this.buffers.set(url,loading);
-      loading.catch(()=>this.buffers.delete(url));
+      this.buffers.set(key,loading);
+      loading.catch(()=>this.buffers.delete(key));
     }
-    return this.buffers.get(url);
+    return this.buffers.get(key);
   }
 
   createRecordingLayer(layer,buffer) {
     const source=this.context.createBufferSource();source.buffer=buffer;source.loop=true;
-    const lowCut=this.context.createBiquadFilter();lowCut.type="highpass";lowCut.frequency.value=75;lowCut.Q.value=.707;
-    const highCut=this.context.createBiquadFilter();highCut.type="lowpass";highCut.frequency.value=8500;highCut.Q.value=.707;
+    const lowCut=this.context.createBiquadFilter();lowCut.type="highpass";lowCut.frequency.value=layer.lowCut ?? 75;lowCut.Q.value=.707;
+    const highCut=this.context.createBiquadFilter();highCut.type="lowpass";highCut.frequency.value=layer.highCut ?? 8500;highCut.Q.value=.707;
     const gain=this.context.createGain();gain.gain.value=0;
-    source.connect(lowCut).connect(highCut).connect(gain).connect(this.master);source.start();
+    source.connect(lowCut).connect(highCut).connect(gain).connect(this.sceneBus);source.start();
     source.onended=()=>{source.disconnect();lowCut.disconnect();highCut.disconnect();gain.disconnect();};
     return {source,gain,maxGain:layer.gain};
   }
@@ -436,13 +438,18 @@ class AudioMixer {
     const source = this.context.createBufferSource(); source.buffer = buffer; source.loop = true;
     const filter = this.context.createBiquadFilter(); filter.type = "bandpass"; filter.frequency.value = layer.frequency; filter.Q.value = layer.q;
     const gain = this.context.createGain(); gain.gain.value = 0;
-    source.connect(filter).connect(gain).connect(this.master); source.start();
+    source.connect(filter).connect(gain).connect(this.sceneBus); source.start();
+    source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};
     return { source, gain, maxGain: layer.gain };
   }
 
   update(intensity) {
     if (!this.context || !this.layers.length) return;
     this.intensity = intensity;
+    if(this.currentScene === 'fireplace') {
+      fireMix(intensity).forEach((mix,index) => this.layers[index].gain.gain.setTargetAtTime(mix * this.layers[index].maxGain, this.context.currentTime, .4));
+      return;
+    }
     if(this.currentScene==="rain"){
       const p=ease(intensity);
       const mixes=[Math.cos(p*Math.PI/2),Math.sin(p*Math.PI/2)];
@@ -515,7 +522,7 @@ async function play() {
     if($("#keep-awake-toggle").checked) requestWakeLock();
   } catch {
     if(request!==playbackRequest)return;
-    controls.setPlaying(false,current.config.name);mixer.pause();
+    controls.setPlaying(false,current.config.name);mixer.pause();timer.setActive(false);releaseWakeLock();
     $("#intensity-description").textContent="Sound could not load. Tap play to retry.";
     showToast("Could not load the sound. Check your connection and tap play again.");
   } finally { if(request===playbackRequest)$("#play-trigger").removeAttribute("aria-busy"); }
@@ -525,19 +532,29 @@ function pause() { playbackRequest++; mixer.pause(); controls.setPlaying(false,c
 function setScene(id) {
   const config=SCENES[id]; if(!config) return;
   const wasPlaying=controls.playing;
-  pause();
+  playbackRequest++;
   current=new Scene(config); renderer.setScene(config); renderer.setIntensity(current.intensity); slider.set(current.intensity);
   app.dataset.scene=config.id; app.style.setProperty("--accent",config.accent);
   $("#scene-name").textContent=config.name; $("#scene-mark").innerHTML=MARKS[config.id];
   $("#intensity-low").textContent=config.labels[0]; $("#intensity-high").textContent=config.labels[1]; $("#world-whisper").textContent=config.whisper; $("#intensity-description").textContent=intensityText(current,current.intensity);
-  controls.setPlaying(false,config.name); mixer.pause();
+  controls.setPlaying(wasPlaying,config.name);
+  if (!wasPlaying) mixer.pause();
+  $('#fireplace-credit').hidden = config.id !== 'fireplace';
   if(wasPlaying) play();
   renderSceneList(); closeSheets();
 }
 
 function renderSceneList() {
   const list=$("#scene-list"); list.innerHTML="";
-  Object.values(SCENES).forEach((config)=>{ const button=document.createElement("button"); button.className="scene-option";button.type="button";button.style.setProperty("--scene-accent",config.accent);button.setAttribute("aria-current",String(config.id===current.config.id));button.innerHTML=`<span class="mini-mark">${config.mark}</span><span class="option-label"><strong>${config.name}</strong><small>${config.labels[0]} — ${config.labels[1]}</small></span><span class="option-state">${config.id===current.config.id?"here":""}</span>`;button.addEventListener("click",()=>setScene(config.id));list.append(button); });
+  Object.values(SCENES).forEach((config)=>{
+    const button=document.createElement('button');
+    button.className='scene-option'; button.type='button'; button.dataset.world=config.id;
+    button.style.setProperty('--scene-accent',config.accent);
+    button.setAttribute('aria-current',String(config.id===current.config.id));
+    button.setAttribute('aria-label',`${config.name}: ${config.labels[0]} to ${config.labels[1]}`);
+    button.innerHTML=`<span class="world-art">${worldArt(config.id,config.accent)}</span><span class="option-label"><strong>${config.name}</strong><small>${config.labels[0]} — ${config.labels[1]}</small></span>`;
+    button.addEventListener('click',()=>setScene(config.id));list.append(button);
+  });
 }
 
 let sheetTrigger = null;

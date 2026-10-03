@@ -1,0 +1,21 @@
+// Small, code-native colored-pencil illustrations for the world picker.
+// The scene itself stays live; these are only navigation drawings.
+export const FIRE_MARK = `<svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2c2 6 1 10 4 13l3-6c5 8 7 15 3 21-5 7-17 6-21-1-4-7 0-13 5-19l1 10c4-5 3-12 5-18Z" fill="currentColor" fill-opacity=".48"/><path d="M14 32c-5-3-4-7-2-10l2 5c3-3 5-6 5-10 5 7 5 12 0 15" fill="#fff" fill-opacity=".85" stroke="none"/></svg>`;
+
+const ART = {
+  rain: `<path d="M35 54C20 54 22 36 35 35c-1-15 17-24 29-13 7-14 26-9 27 7 19-3 24 20 5 24Z" fill="#75b9e3" stroke="#3c88bd" stroke-width="1.8"/><path d="M37 50C31 41 41 39 42 39m10-10c6-5 12-1 13 4m10-11c7 0 9 7 8 11m10 4 5 5" fill="none" stroke="#fff" opacity=".6"/><g fill="#72b7e2" stroke="#3c88bd" stroke-width="1.3"><path d="m39 64-4 9c-3 6 4 8 6 3l2-12Z"/><path d="m62 60-4 10c-3 6 4 7 6 2l2-12Z"/><path d="m84 64-4 10c-3 6 4 8 6 2l2-12Z"/><path d="m53 78-3 7c-2 5 3 7 5 2l1-8Z"/></g>`,
+  fireplace: `<g stroke-linejoin="round"><path d="M40 71C24 57 38 40 42 33l3 14c8-12 14-26 16-40 10 12 14 23 12 34l7-13c17 23 21 41 1 48Z" fill="#ed946b" stroke="#c76748" stroke-width="1.7"/><path d="M48 70c-10-12 2-24 8-33l-1 17c9-6 11-14 12-22 13 17 17 27 7 40Z" fill="#f7c07f" stroke="#de8d50"/><path d="M57 73c-8-8 0-16 4-21l1 12 8-11c5 11 2 17-4 21" fill="#fff7e8" stroke="none"/><path d="m32 73 58 12 5-8-60-12Z" fill="#a07859" stroke="#775743" stroke-width="1.8"/><path d="m33 83 57-19 4 8-58 21Z" fill="#b28b67" stroke="#795740" stroke-width="1.5"/><ellipse cx="35" cy="87" rx="5" ry="6" fill="#d9b48a" stroke="#795740"/><path d="m44 79 35 7m-35-3 34-11m-47 13 8 2m46 2 10-1m-71-10 8-1" stroke="#7c5940" fill="none" opacity=".65"/></g>`,
+  forest: `<g stroke="#547460" stroke-linecap="round" stroke-linejoin="round"><path d="m62 84 1-68m-35 73 1-42m65 44-1-40" stroke="#8b7960" stroke-width="3"/><path d="m62 9-20 35 10-4-20 24 14-4-15 15 20-4 12-6 16 10 17 1-17-17 12 3-17-24 10 6Z" fill="#8da28c" stroke-width="1.5"/><path d="m28 39-14 23 8-3-14 17 10-3-7 12 17-6 18 6-11-15 8 3-10-16 6 3Z" fill="#adc0a6" stroke-width="1.2"/><path d="m94 44-11 18 5-2-12 18 8-3-7 12 17-4 15 5-9-16 7 4-10-19 5 3Z" fill="#a1b99c" stroke-width="1.2"/><path d="m61 28-6 9m11-4 5 7m-12 5-7 9m15-6 9 10m-17 2-9 7m-20-10-5 9m70-3 5 8" fill="none" stroke="#e9e3ba" stroke-width="2"/></g>`,
+  ocean: `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 69c24-2 28-26 40-41C64 8 92 13 94 32c2 15-17 20-23 9-4-8 7-15 12-7-12-5-11 12-1 13-18 0-27-4-35 7-9 13-16 19-37 21m18 5c23 1 37-8 46-22 10-15 26-14 29-2 3 11-11 13-15 6m-51 25c18 0 21-10 30-10 8 0 8 10 17 10 13 0 25-6 30-15" stroke="#428ac0" stroke-width="3"/><path d="M13 65c24-4 31-38 46-44 12-5 23-3 27 4M15 73c17-2 32-20 39-29m-23 32c20-3 22-24 37-30M57 72c15-18 20-27 32-21m-24 28c10-8 19-7 24-6" stroke="#83bfe2" stroke-width="2"/><path d="m22 83-4 2m76-59 7 3m-4 48 10-4m-59-54 5-4" stroke="#8ec6e6" stroke-width="1.2"/></g>`,
+  snow: `<g fill="none" stroke="#9690c6" stroke-linecap="round" stroke-linejoin="round"><path d="m63 12-1 75M29 30l66 40M96 30 28 70" stroke-width="3"/><path d="m54 20 9 10 9-10m-20 58 10-10 10 10M31 42l12-3-1-12m42 42-1-13 12-3m-64 7 13 2-2 13m40-45 1 13 12 3" stroke-width="2.2"/><path d="M18 19v10m-4-5h8m79-8v10m-4-5h8m-85 48v9m-4-5h8m78-1v10m-4-5h8M46 9v6m39 74v5" stroke-width="1.5" opacity=".75"/></g>`
+};
+
+export function worldArt(id, color) {
+  const clip = `picker-${id}`, texture = `pencil-${id}`;
+  let marks = '';
+  for (let n=0;n<150;n++) {
+    const x=4+(n*47.731)%116,y=5+(n*23.719)%88;
+    marks += `<path d="M${x.toFixed(1)} ${y.toFixed(1)}l${(3+n%7).toFixed(1)} -${4+n%9}" stroke-width="${.5+n%3*.35}" opacity="${.07+n%4*.035}"/>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 98" aria-hidden="true"><defs><clipPath id="${clip}"><path d="M8 26Q10 8 43 6L89 8Q117 10 118 32L116 73Q113 91 88 92L31 91Q5 89 5 71Z"/></clipPath><filter id="${texture}" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".25" numOctaves="2" seed="7" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale=".65"/></filter></defs><g clip-path="url(#${clip})" stroke="${color}"><path d="M0 0h124v98H0Z" fill="${color}" fill-opacity=".035" stroke="none"/>${marks}</g><g filter="url(#${texture})">${ART[id]}</g></svg>`;
+}
