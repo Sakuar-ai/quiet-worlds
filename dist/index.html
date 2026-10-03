@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fbfbfc" />
+    <meta name="description" content="A hand-drawn ambient sound prototype where you adjust the world." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='none' stroke='%23396b9c' stroke-linecap='round' stroke-width='5' d='M16 30c7-12 25-12 32 0M21 40c5 7 17 7 22 0M28 18l4-5 4 5'/%3E%3C/svg%3E" />
+    <title>Quiet Worlds — ambient sound</title>
+    <link rel="stylesheet" href="./styles.css?v=rain-refined-4" />
+  </head>
+  <body>
+    <main class="app-shell" aria-label="Quiet Worlds ambient sound player">
+      <section class="app" aria-live="polite">
+        <header class="top-bar">
+          <button id="scene-trigger" class="icon-button quiet" aria-haspopup="dialog" aria-expanded="false" aria-controls="scene-sheet" aria-label="Choose environment">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8.5 12 15.5 19 8.5" /></svg>
+          </button>
+          <div class="title-lockup">
+            <span id="scene-mark" class="scene-mark" aria-hidden="true"></span>
+            <h1 id="scene-name">Rain</h1>
+          </div>
+          <button id="timer-trigger" class="timer-button" aria-haspopup="dialog" aria-expanded="false" aria-controls="timer-sheet" aria-label="Change timer; 30 minutes remaining">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.8 3.7A8.6 8.6 0 1 0 20.5 12" /><path d="M16.2 2.8v4.8H21" /></svg>
+            <span id="timer-label">30 min</span>
+          </button>
+        </header>
+
+        <section class="world" aria-label="Animated environment">
+          <canvas id="scene-canvas" role="img" aria-label="A soft hand-drawn rain scene with falling rain and ripples"></canvas>
+          <p id="world-whisper" class="world-whisper">A little rain, held softly.</p>
+        </section>
+
+        <section class="intensity-area" aria-labelledby="intensity-caption">
+          <div class="intensity-copy">
+            <span id="intensity-low">Drizzle</span>
+            <span id="intensity-caption" class="sr-only">Environment intensity</span>
+            <span id="intensity-high">Downpour</span>
+          </div>
+          <div class="range-wrap">
+            <div id="range-ink" class="range-ink" aria-hidden="true"></div>
+            <input id="intensity-slider" class="intensity-slider" type="range" min="0" max="1000" value="360" step="1" aria-labelledby="intensity-low intensity-high" />
+          </div>
+          <p id="intensity-description" class="intensity-description">Soft rain is gathering.</p>
+        </section>
+
+        <footer class="controls" aria-label="Playback controls">
+          <button id="settings-trigger" class="icon-button" aria-label="Open gentle settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-sheet">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6" /><circle cx="8" cy="7" r="1.8" /><circle cx="16" cy="17" r="1.8" /></svg>
+          </button>
+          <button id="play-trigger" class="play-button" aria-label="Play Rain">
+            <svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 9 6-9 6Z" /></svg>
+          </button>
+          <button id="favorite-trigger" class="icon-button" aria-label="Add Rain to favorites" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.4S4 16.2 4 10.2C4 7.8 5.8 6 8.1 6c1.6 0 3.1.9 3.9 2.2C12.8 6.9 14.3 6 15.9 6 18.2 6 20 7.8 20 10.2c0 6-8 10.2-8 10.2Z" /></svg>
+          </button>
+        </footer>
+      </section>
+
+      <section id="scene-sheet" class="sheet" role="dialog" aria-modal="true" aria-label="Choose an environment" hidden>
+        <button class="scrim" data-close-sheet aria-label="Close environment picker"></button>
+        <div class="sheet-panel">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <p class="sheet-kicker">Choose a world</p>
+          <div id="scene-list" class="scene-list"></div>
+        </div>
+      </section>
+
+      <section id="settings-sheet" class="sheet" role="dialog" aria-modal="true" aria-label="Gentle settings" hidden>
+        <button class="scrim" data-close-sheet aria-label="Close settings"></button>
+        <div class="sheet-panel settings-panel">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <p class="sheet-kicker">Gentle settings</p>
+          <label class="setting-row" for="motion-toggle">
+            <span><strong>Slow the movement</strong><small>Let the world move at an unhurried pace.</small></span>
+            <input id="motion-toggle" type="checkbox" />
+          </label>
+          <label class="setting-row" for="keep-awake-toggle">
+            <span><strong>Keep this world open</strong><small>Ask this screen to stay awake while playing.</small></span>
+            <input id="keep-awake-toggle" type="checkbox" />
+          </label>
+          <p class="sound-credit">Rain recordings: <a href="https://freesound.org/people/InspectorJ/sounds/401277/" target="_blank" rel="noopener noreferrer">Rain, Moderate, A</a> and <a href="https://freesound.org/people/InspectorJ/sounds/401275/" target="_blank" rel="noopener noreferrer">C</a> by <a href="https://www.jshaw.co.uk/" target="_blank" rel="noopener noreferrer">InspectorJ</a> / Freesound, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Excerpts looped, level-matched and filtered.</p>
+        </div>
+      </section>
+
+      <section id="timer-sheet" class="sheet" role="dialog" aria-modal="true" aria-label="Set a timer" hidden>
+        <button class="scrim" data-close-sheet aria-label="Close timer choices"></button>
+        <div class="sheet-panel timer-panel">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <p class="sheet-kicker">Let this world rest after</p>
+          <div id="timer-presets" class="timer-presets" role="group" aria-label="Timer presets">
+            <button type="button" data-minutes="5">5 min</button>
+            <button type="button" data-minutes="10">10 min</button>
+            <button type="button" data-minutes="15">15 min</button>
+            <button type="button" data-minutes="30">30 min</button>
+          </div>
+          <form id="custom-timer-form" class="custom-timer-form">
+            <label for="custom-minutes">Custom time</label>
+            <input id="custom-minutes" type="number" inputmode="numeric" min="1" max="360" step="1" required placeholder="minutes" aria-label="Custom timer minutes" />
+            <button type="submit">Set</button>
+          </form>
+          <button id="timer-off" type="button" class="timer-off">No timer</button>
+        </div>
+      </section>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+    <script type="module" src="./app.js?v=rain-refined-4"></script>
+  </body>
+</html>
