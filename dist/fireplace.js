@@ -1,16 +1,16 @@
-// One SVG world, driven by the same normalized intensity as its audio mix.
+// A small pencil-drawn object inside the same responsive scene area as Rain.
 const clampFire = n => Math.max(0, Math.min(1, n));
 const smoothFire = n => { const p = clampFire(n); return p * p * (3 - 2 * p); };
 
 export function fireParameters(intensity) {
   const i = clampFire(intensity);
   return {
-    flameHeight: 8 + 112 * Math.pow(i, .85),
-    flameWidthVariation: 1 + i * 6,
-    flameMovement: .24 + i * .83,
-    flameCount: 1 + i * 6,
-    emberGlow: .22 + i * .63,
-    sparkFrequency: .015 + i * i * .62
+    flameHeight: 5 + 91 * Math.pow(i, .85),
+    flameWidthVariation: .6 + i * 2.3,
+    flameMovement: .18 + i * .4,
+    flameCount: 1 + i * 4,
+    emberGlow: .12 + i * .25,
+    sparkFrequency: .005 + i * i * .24
   };
 }
 
@@ -27,77 +27,50 @@ export class FireplaceRenderer {
     this.element = document.createElement('div');
     this.element.className = 'fireplace-world';
     this.element.setAttribute('aria-hidden', 'true');
-    this.element.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="24 80 352 236" role="img" aria-label="Crayon-drawn brick fireplace on white paper">
+    this.element.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" role="img" aria-label="A simple pencil-drawn brick fireplace, three logs and a small central fire on white paper">
       <defs>
-        <filter id="fire-pencil" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".36" numOctaves="3" seed="14" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="1.25"/></filter>
-        <radialGradient id="ember-light"><stop stop-color="#ffb34e" stop-opacity=".9"/><stop offset=".5" stop-color="#e7602d" stop-opacity=".55"/><stop offset="1" stop-color="#e7602d" stop-opacity="0"/></radialGradient>
-        <clipPath id="fire-cavity"><path d="M102 410 104 323Q107 298 151 289Q205 274 254 292Q287 302 296 324L296 410Z"/></clipPath>
-        <pattern id="fire-hatch" patternUnits="userSpaceOnUse" width="5" height="7"><path d="m.5 6 3-4m1 5 1-2" stroke="#fff9db" stroke-width=".75" opacity=".6"/></pattern>
-        <clipPath id="fire-bricks"><path d="M77 220 321 218 324 414 287 414 286 291Q283 253 251 247Q200 234 148 246Q114 252 113 292L112 414 76 414Z"/></clipPath>
+        <filter id="fire-pencil" x="-3%" y="-3%" width="106%" height="106%"><feTurbulence type="fractalNoise" baseFrequency=".2" numOctaves="2" seed="14" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale=".65"/></filter>
+        <clipPath id="fire-cavity"><path d="M112 423 113 309Q112 279 148 269Q202 253 250 269Q286 279 286 309L287 423Z"/></clipPath>
+        <clipPath id="fire-bricks"><path clip-rule="evenodd" d="M78 238 320 237 322 425 77 425ZM112 423 113 309Q112 279 148 269Q202 253 250 269Q286 279 286 309L287 423Z"/></clipPath>
+        <pattern id="fire-hatch" patternUnits="userSpaceOnUse" width="8" height="9"><path d="m1 7 3-5" stroke="#fff7df" stroke-width=".65" opacity=".32"/></pattern>
       </defs>
       <g class="fire-structure" stroke-linecap="round" stroke-linejoin="round" filter="url(#fire-pencil)">
-        <path d="M79 218 320 220 324 414 76 414Z" fill="#be8067" fill-opacity=".07"/>
-        <path d="M112 413 113 292Q114 252 148 246Q200 234 251 247Q283 253 286 291L287 415Z" fill="#79665b" fill-opacity=".18"/>
-        <g clip-path="url(#fire-cavity)" stroke="#8e7d72" stroke-width=".65" opacity=".13">
-          <path d="m103 305 189-39m-190 60 193-39m-191 61 190-39m-192 60 193-38m-192 60 190-39m-174 55 171-33"/>
+        <path d="M78 238 320 237 322 425 77 425Z" fill="#b47f69" fill-opacity=".045"/>
+        <path d="M112 423 113 309Q112 279 148 269Q202 253 250 269Q286 279 286 309L287 423Z" fill="#69635e" fill-opacity=".48"/>
+        <g clip-path="url(#fire-cavity)" fill="none" stroke="#665c54" stroke-width=".9" opacity=".19">
+          <path d="m112 310 24-31m-18 63 45-67m-42 89 66-99m-66 121 83-124m-65 128 81-119m-68 137 89-133m-65 139 86-130m-57 133 71-110m-45 110 45-71m-21 73 23-36"/>
         </g>
-        <g fill="none" stroke="#ac745d" stroke-width="1.6">
-          <path d="M77 412 78 221 143 219 220 220 320 218 323 413"/>
-          <path d="M112 408 113 292Q114 252 148 246Q200 234 251 247Q283 253 286 291L287 408"/>
-          <path d="m71 209 85-2 97 2 76-2 1 13-94 1-88-2-78 2Z" fill="#c39077" fill-opacity=".1"/>
-          <path d="m67 413 74-2 105 2 85-1 4 12-74 1-116-1-80 2Z" fill="#bc8b72" fill-opacity=".12"/>
+        <g fill="none" stroke="#ae7b64" stroke-width="1.4">
+          <path d="M77 424 79 239 142 238 220 239 320 237 322 424"/>
+          <path d="M112 422 113 309Q112 279 148 269Q202 253 250 269Q286 279 286 309L287 422"/>
+          <path d="m73 226 83-1 94 1 76-1 1 13-94 1-86-1-74 1Z" fill="#ba8c73" fill-opacity=".07"/>
+          <path d="m70 425 76-1 98 1 84-1 3 9-80 1-104-1-78 1Z" fill="#b68b73" fill-opacity=".05"/>
         </g>
-        <g clip-path="url(#fire-bricks)" fill="none" stroke="#bc8a72" stroke-width="1.1" opacity=".76">
-          <path d="m77 247 53-1 68 1 64-2 60 2m-245 28 57 1 55-2 77 1 56 1m-245 28 79-1 75 2 93-2m-247 29 70 1 95-2 81 2m-246 27 77 1 91-2 79 1m-247 28 89 1 69-2 88 1"/>
-          <path d="m124 221 1 26m63-26-1 24m62-25 1 26m42-27 1 27m-197 2 1 26m47-27-1 29m126-29 1 28m-158 30-17-1m0-28 1 27m-16 28 31 1m-16 1-1 27m0 29 1 26m-16-26 34 1m196-112 1 27m-21 27 35 1m-17 1 1 27m-20 28 36-1m-18 1-1 28"/>
+        <g clip-path="url(#fire-bricks)" fill="none" stroke="#b68b75" stroke-width="1" opacity=".7">
+          <path d="m79 267 63-1 58 1 61-1 60 1m-243 32 57 1 62-2 68 1 57 1m-244 31 79-1 75 1 91-1m-246 32 78 1 87-2 81 1m-246 31 76 1 91-1 80 1"/>
+          <path d="m127 239 1 27m61-27-1 27m61-28 1 28m-153 3 1 29m-1 33 1 30m-1 33 1 30m205-155 1 29m-1 33 1 30m-1 33 1 30"/>
+          <path d="m84 246 14-4m41 3 17-3m40 3 13-3m53 3 14-3m-190 44 10-8m-10 42 12-9m-12 41 10-7m-10 39 11-7m203-98 9-7m-9 39 10-7m-10 39 9-7m-9 39 11-6" stroke-width=".65" opacity=".42"/>
         </g>
-        <g clip-path="url(#fire-bricks)" class="brick-grain" stroke="#b97b61" stroke-linecap="round"></g>
-        <path d="m82 225-1 76m238 17 2 88m-244 13 53-1m112 2 83-1" fill="none" stroke="#925e4d" stroke-width=".65" opacity=".36"/>
+        <path d="m63 439 64-2m31 4 96-1m23-2 58 1" fill="none" stroke="#bfa28b" stroke-width="1" opacity=".45"/>
       </g>
       <g clip-path="url(#fire-cavity)">
-        <ellipse class="fire-glow" cx="200" cy="388" rx="92" ry="68" fill="url(#ember-light)"/>
+        <ellipse class="fire-glow" cx="200" cy="413" rx="41" ry="8" fill="#dba56c"/>
+        <g class="fire-rear-logs" fill="#947660" stroke="#785f4e" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" filter="url(#fire-pencil)">
+          <path data-log-depth="rear" d="m148 405 8-7 86 12-2 10-86-9Z"/>
+          <path data-log-depth="rear" d="m159 414 80-18 7 5-2 7-80 16Z"/>
+          <path d="m159 404 61 9m-48 3 60-14" fill="none" stroke="#c5a184" stroke-width=".8"/>
+        </g>
         <g class="fire-flames" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
         <g class="fire-flame-grain"></g>
-        <g class="fire-logs" stroke-linecap="round" stroke-linejoin="round" filter="url(#fire-pencil)">
-          <path d="m143 387 89-18 12 7-5 12-89 14-9-6Z" fill="#8c7260" stroke="#71594d" stroke-width="1.5"/>
-          <path d="m129 389 12-5 109 17 6 10-12 7-109-17Z" fill="#9d8067" stroke="#755c4b" stroke-width="1.6"/>
-          <path d="m176 404 80-19 11 5-3 10-79 19-10-5Z" fill="#826852" stroke="#6e5548" stroke-width="1.4"/>
-          <path d="m150 390 76-14m-84 18 93 14m-83-10 27 4m16 2 41 7m-45-3 61-16m-55 21 58-15" fill="none" stroke="#594c42" stroke-width=".8" opacity=".58"/>
-          <path d="m140 388-4 5 3 5m104 6-3 4 5 5 5-4-3-4m-65 2-4 5 4 3m73-28 5 4-2 5" fill="none" stroke="#c6a386" stroke-width="1.2"/>
-        </g>
-        <g class="fire-embers" stroke-linecap="round"></g>
-        <g class="fire-sparks" fill="none" stroke-linecap="round"></g>
       </g>
+      <g class="fire-logs" stroke-linecap="round" stroke-linejoin="round" filter="url(#fire-pencil)">
+        <path data-log-depth="front" d="m158 419 89-2 5 5-4 7-90 1Z" fill="#9a7a60" stroke="#7d624e" stroke-width="1.3"/>
+        <ellipse cx="159" cy="424" rx="4.5" ry="6" fill="#c7a181" stroke="#876951" stroke-width="1.1"/>
+        <path d="m171 423 57-2m-48 5 32-1" fill="none" stroke="#c7a181" stroke-width=".8"/>
+      </g>
+      <g class="fire-embers" stroke-linecap="round"></g>
+      <g class="fire-sparks" fill="none" stroke-linecap="round"></g>
     </svg>`;
-    // Replace the old pale vector masonry with a single static crayon texture.
-    // There is no flame or glow baked into this image: every fire state remains live.
-    const structure = this.element.querySelector('.fire-structure');
-    structure.removeAttribute('filter');
-    structure.innerHTML = '<image href="./art/fireplace-paper-v3.png" x="0" y="55" width="400" height="266.6667"/>';
-    const fireLayer = this.element.querySelector('.fire-glow').parentElement;
-    fireLayer.setAttribute('transform', 'translate(0 -147)');
-    const logs = this.element.querySelector('.fire-logs');
-    // Keep the low front log outside the opening clip; rear logs sit behind fire.
-    fireLayer.after(logs);
-    logs.setAttribute('transform', 'translate(0 -147)');
-    logs.innerHTML = '';
-    for (const [index, angle, x, y] of [[0, 12, 191, 403], [1, -13, 209, 401], [2, -4, 201, 412]]) {
-      let grain = '';
-      for (let n=0;n<60;n++) {
-        const gx=-62+(n*23.7)%124, gy=-7+(n*3.73)%14;
-        grain += `<path d="M${gx} ${gy}l${4+n%11} ${n%2?.8:-.7}" stroke="${n%3?'#c79c70':'#f1dbc1'}" stroke-width="${.45+n%3*.3}" opacity="${.32+n%4*.1}"/>`;
-      }
-      logs.innerHTML += `<g data-log-depth="${index < 2 ? 'rear' : 'front'}" transform="translate(${x} ${y}) rotate(${angle}) scale(.85 .68)"><path d="M-65-8Q-6-11 61-8L66-3 65 7Q4 10-64 8Z" fill="#815032" stroke="#75462d" stroke-width="1.6"/>${grain}<ellipse cx="-64" cy="0" rx="6" ry="9" fill="#c88d60" stroke="#784a31" stroke-width="1.4"/><ellipse cx="-64" cy="0" rx="3.5" ry="6" fill="none" stroke="#8f5737" stroke-width=".7"/><path d="M61-7Q68 0 62 8" fill="none" stroke="#dda376" stroke-width="1.1"/></g>`;
-    }
-    const rearLogs = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    rearLogs.setAttribute('class', 'fire-rear-logs');
-    rearLogs.setAttribute('filter', 'url(#fire-pencil)');
-    logs.querySelectorAll('[data-log-depth="rear"]').forEach(log => rearLogs.append(log));
-    fireLayer.insertBefore(rearLogs, this.element.querySelector('.fire-flames'));
-    const embers = this.element.querySelector('.fire-embers');
-    logs.after(embers); embers.setAttribute('transform', 'translate(0 -147)');
-    const sparks = this.element.querySelector('.fire-sparks');
-    embers.after(sparks); sparks.setAttribute('transform', 'translate(0 -147)');
     parent.append(this.element);
     const ns = 'http://www.w3.org/2000/svg';
     const add = (group, tag, attrs) => {
@@ -106,12 +79,11 @@ export class FireplaceRenderer {
       this.element.querySelector(group).append(node);
       return node;
     };
-    // Seeded paper marks never move with the fire.
-    const colors = ['#e96534','#ef8742','#ed6333','#ffa744','#f78d36','#ffd465','#fff3ce'];
-    this.flames = colors.map((color, n) => add('.fire-flames', 'path', {fill:color, stroke:n % 2 ? '#c78152' : '#b86f4c', 'stroke-width':.75}));
+    const colors = ['#cf8856','#d99b60','#dea567','#edc47e','#f5ddb0'];
+    this.flames = colors.map((color, n) => add('.fire-flames', 'path', {fill:color, stroke:n < 3 ? '#bc865d' : '#d5b47e', 'stroke-width':.8}));
     this.flameGrain = colors.map(() => add('.fire-flame-grain', 'path', {fill:'url(#fire-hatch)'}));
-    this.embers = Array.from({length:16}, (_, n) => add('.fire-embers', 'path', {d:`M${142 + (n * 37 % 112)} ${394 + (n * 13 % 20)}l${2 + n % 4} ${n % 2 ? -1 : 1}`, stroke:n % 3 ? '#cc754c' : '#e2ac72', 'stroke-width':1.2 + n % 3 * .3}));
-    this.sparks = Array.from({length:12}, () => add('.fire-sparks', 'path', {stroke:'#ed8440','stroke-width':1.1}));
+    this.embers = Array.from({length:5}, (_, n) => add('.fire-embers', 'path', {d:`M${169+n*14} ${416+n%2*2}l2 -.5`, stroke:'#cd9560', 'stroke-width':1}));
+    this.sparks = Array.from({length:4}, () => add('.fire-sparks', 'path', {stroke:'#d3a16c','stroke-width':.9}));
     this.glow = this.element.querySelector('.fire-glow');
     this.time = 0;
     this.last = null;
@@ -126,36 +98,34 @@ export class FireplaceRenderer {
   }
 
   update(now, intensity, slow = false) {
-    const p = fireParameters(intensity);
+    const i = clampFire(intensity), p = fireParameters(i);
     const delta = this.last === null ? 0 : Math.max(0, Math.min(.06, now - this.last));
     this.last = now;
-    // Integrating time avoids a flame jump when intensity changes.
     this.time += delta * p.flameMovement * (slow ? .23 : 1);
-    const t = this.time;
-    const x = [193,171,223,195,242,180,208];
+    const t = this.time, x = [199,184,213,199,202];
     this.flames.forEach((node, n) => {
-      const presence = n === 0 ? 1 : smoothFire((intensity - (n - 1) * .105) / .22);
-      const sway = Math.sin(t * (1.31 + n * .17) + n * 2.7) * p.flameWidthVariation + Math.sin(t * .73 + n) * intensity * 2;
-      const pulse = 1 + .055 * Math.sin(t * (2.1 + n * .13) + n) + .04 * Math.sin(t * 1.17 + n * 2);
-      const height = p.flameHeight * [1,.67,.82,.83,.53,.53,.58][n] * pulse;
-      const width = (3 + intensity * [20,19,18,14,13,11,9][n]) * (1 + .06 * Math.sin(t * 1.8 + n));
-      const bottom = 401 - n % 3 * 3, tip = x[n] + sway;
-      const d = `M${x[n]-width} ${bottom}C${x[n]-width*1.5} ${bottom-height*.18} ${x[n]-width*.55} ${bottom-height*.42} ${tip-width*.27} ${bottom-height*.62}C${tip+width*.22} ${bottom-height*.8} ${tip+width*.26} ${bottom-height*.85} ${tip} ${bottom-height}C${tip+width*.98} ${bottom-height*.74} ${x[n]+width*.12} ${bottom-height*.56} ${x[n]+width*.7} ${bottom-height*.4}C${x[n]+width*1.7} ${bottom-height*.16} ${x[n]+width*1.06} ${bottom+4} ${x[n]} ${bottom+3}Q${x[n]-width*.65} ${bottom+5} ${x[n]-width} ${bottom}Z`;
+      const presence = n === 0 ? 1 : smoothFire((i - (n - 1) * .1) / .25);
+      const sway = Math.sin(t * (1.15 + n * .12) + n * 2.7) * p.flameWidthVariation;
+      const pulse = 1 + .035 * Math.sin(t * (1.7 + n * .13) + n);
+      const height = p.flameHeight * [1,.64,.71,.61,.38][n] * pulse;
+      const width = 2.5 + i * [17,12,12,10,6][n];
+      const bottom = 416 - n % 2 * 2, tip = x[n] + sway;
+      const d = `M${x[n]-width} ${bottom}C${x[n]-width*1.4} ${bottom-height*.2} ${x[n]-width*.5} ${bottom-height*.44} ${tip-width*.24} ${bottom-height*.65}Q${tip+width*.28} ${bottom-height*.83} ${tip} ${bottom-height}C${tip+width*.92} ${bottom-height*.74} ${x[n]+width*.1} ${bottom-height*.54} ${x[n]+width*.66} ${bottom-height*.38}C${x[n]+width*1.5} ${bottom-height*.14} ${x[n]+width} ${bottom+2} ${x[n]} ${bottom+3}Q${x[n]-width*.65} ${bottom+4} ${x[n]-width} ${bottom}Z`;
       node.setAttribute('d', d);
+      node.setAttribute('opacity', .88 * presence);
       this.flameGrain[n].setAttribute('d', d);
-      this.flameGrain[n].setAttribute('opacity', presence * .85);
-      node.setAttribute('opacity', (.84 + n * .022) * presence);
+      this.flameGrain[n].setAttribute('opacity', presence * .55);
     });
-    this.glow.setAttribute('opacity', p.emberGlow * (.94 + .06 * Math.sin(t * .79)));
-    this.embers.forEach((node,n) => node.setAttribute('opacity', p.emberGlow * (.65 + .35 * Math.sin(t * (1.2+n*.11)+n*3.7)**2)));
+    this.glow.setAttribute('opacity', p.emberGlow * (.96 + .04 * Math.sin(t * .7)));
+    this.embers.forEach((node,n) => node.setAttribute('opacity', p.emberGlow * (.75 + .25 * Math.sin(t+n*2)**2)));
     this.sparks.forEach((node,n) => {
-      const phase = (t * (.11 + n * .006) + n * .618034) % 1;
-      const presence = smoothFire((intensity - .12 - n * .047) / .22);
-      const life = Math.min(1, p.sparkFrequency * 1.2), progress = phase / Math.max(.001, life);
-      const sx = n < 8 ? 145 + n * 15 + Math.sin(t * .7 + n) * 5 : 67 + (n-8) * 87 + Math.sin(t+n)*3;
-      const sy = 389 - Math.min(1, progress) * (42 + intensity * (n<8?134:164));
-      node.setAttribute('d', `M${sx} ${sy}l${Math.sin(n+t)*1.2} -2.1`);
-      node.setAttribute('opacity', progress < 1 ? Math.sin(progress*Math.PI) * presence * .62 : 0);
+      const phase = (t * (.12 + n * .008) + n * .618034) % 1;
+      const presence = smoothFire((i - .28 - n * .14) / .26);
+      const progress = phase / Math.max(.001, p.sparkFrequency);
+      const sx = 184 + n * 11 + Math.sin(t * .6 + n) * 2;
+      const sy = 402 - Math.min(1, progress) * (35 + i * 75);
+      node.setAttribute('d', `M${sx} ${sy}l.4 -1.5`);
+      node.setAttribute('opacity', progress < 1 ? Math.sin(progress*Math.PI) * presence * .48 : 0);
     });
     this.parameters = p;
   }

@@ -23,6 +23,28 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install test dependencies
+        run: npm ci
+      - name: Validate static build
+        run: npm run build
+      - name: Install browser for portrait checks
+        run: npx playwright install --with-deps chromium
+      - name: Compare Rain and Fireplace on iPhone viewports
+        run: npm run test:ui
+      - name: Save viewport screenshots and measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone-layout-checks
+          path: test-results
+          retention-days: 14
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static website
