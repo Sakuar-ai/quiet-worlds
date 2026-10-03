@@ -34,6 +34,9 @@ const makePage=async(viewport,old=false)=>{
   if(old)await page.route('**/styles.css*',r=>r.fulfill({contentType:'text/css',body:oldCss}));
   await page.goto(url);await page.waitForFunction(()=>window.__sceneQA);
   await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important}'});
+  // Let the initial ResizeObserver and fonts settle before drawing the frozen frame.
+  await page.evaluate(()=>document.fonts.ready);
+  await page.waitForTimeout(150);
   await page.evaluate(()=>{const r=window.__sceneQA.renderer;r.resize();r.render(r.start+3000);});
   return {page,errors};
 };
@@ -42,7 +45,8 @@ try {
     const key=`${viewport.width}x${viewport.height}`,old=await makePage(viewport,true),current=await makePage(viewport);
     const before=await measure(old.page),rain=await measure(current.page);
     assert.deepEqual(rain,before,`${key}: approved Rain layout must remain identical`);
-    const oldPng=await old.page.screenshot(),rainPng=await current.page.screenshot({path:`test-results/${key}-rain.png`});
+    for(const page of [old.page,current.page])await page.evaluate(()=>{const r=window.__sceneQA.renderer;r.render(r.start+3000);});
+    const oldPng=await old.page.screenshot({path:`test-results/${key}-rain-baseline.png`}),rainPng=await current.page.screenshot({path:`test-results/${key}-rain.png`});
     assert.ok(oldPng.equals(rainPng),`${key}: Rain pixel regression`);
     await current.page.locator('#scene-trigger').click();
     await current.page.locator('[data-world="fireplace"]').click();
