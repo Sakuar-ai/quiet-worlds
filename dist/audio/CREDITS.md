@@ -11,7 +11,18 @@
   soft peak limiting and gentle high/low-pass filtering. No synthesized rain.
 - Attribution and license links are also available in the app’s settings.
 
-## Fireplace
+## Fireplace — active v3
+
+`fireplace-wood-v3.wav`: “Fireplace Sound loop” by PagDev, OpenGameArt.
+
+- Source: https://opengameart.org/content/fireplace-sound-loop
+- Original: https://opengameart.org/sites/default/files/fire.wav
+- License: CC0, https://creativecommons.org/publicdomain/zero/1.0/
+- Downloaded 2026-10-03. Source is a 29.2635-second stereo 44.1 kHz 32-bit PCM WAV, converted to 16-bit PCM WAV at the same sample rate and channel count for delivery. No lossy codec used.
+- Three excerpts from the same source (1s/3s/5s offsets, 24s/23s/22s loop lengths). Seam crossfades, level matching, gentle 180 Hz high-pass conditioning, soft peak ceiling, and per-layer frequency filtering are applied during playback.
+- No additional wildlife, music or synthetic fire layers. This is a replacement source, not an extraction from the user's YouTube reference.
+
+## Previous Fireplace recording — retained, inactive
 
 `fireplace-steady.mp3`: “Fireplace #4” by Joseph SARDIN, BigSoundBank.
 

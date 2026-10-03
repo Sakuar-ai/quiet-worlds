@@ -1,4 +1,4 @@
-import { FireplaceRenderer, fireMix } from './fireplace.js?v=phase2a-2';
+import { FireplaceRenderer, fireMix } from './fireplace.js?v=phase2a-4';
 import { worldArt, FIRE_MARK } from './world-art.js?v=phase2a-2';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
@@ -35,9 +35,9 @@ const SCENES = {
     descriptions: ["A few embers are breathing.", "The fire is gently unfolding.", "The logs are speaking brightly."],
     aria: "A simple hand-drawn brick fireplace with small moving flames",
     audio: [
-      { label: "soft ember body", kind: "recording", url: "./audio/fireplace-steady.mp3", start: 6, duration: 29, profile: "soft-fire", lowCut: 220, highCut: 1800, gain: .85 },
-      { label: "gentle wood crackle", kind: "recording", url: "./audio/fireplace-steady.mp3", start: 22, duration: 31, profile: "soft-fire", lowCut: 500, highCut: 5400, gain: .7 },
-      { label: "full steady fire", kind: "recording", url: "./audio/fireplace-steady.mp3", start: 38, duration: 37, profile: "soft-fire", lowCut: 220, highCut: 6200, gain: .75 }
+      { label: "soft ember body", kind: "recording", url: "./audio/fireplace-wood-v3.wav", start: 1, duration: 24, profile: "soft-fire", lowCut: 220, highCut: 1800, gain: .85 },
+      { label: "gentle wood crackle", kind: "recording", url: "./audio/fireplace-wood-v3.wav", start: 3, duration: 23, profile: "soft-fire", lowCut: 500, highCut: 5400, gain: .7 },
+      { label: "full steady fire", kind: "recording", url: "./audio/fireplace-wood-v3.wav", start: 5, duration: 22, profile: "soft-fire", lowCut: 220, highCut: 6200, gain: .75 }
     ]
   },
   forest: {
