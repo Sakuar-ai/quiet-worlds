@@ -11,7 +11,20 @@
   soft peak limiting and gentle high/low-pass filtering. No synthesized rain.
 - Attribution and license links are also available in the app’s settings.
 
-## Fireplace — active v3
+## Fireplace — active audio v13, approved kingsrow recording
+
+`fireplace-kingsrow-v1.flac`: “Fire Crackling 01.wav” by kingsrow, Freesound.
+
+- Source: https://freesound.org/people/kingsrow/sounds/181563/
+- License: CC0, https://creativecommons.org/publicdomain/zero/1.0/ (verified on the source page 2026-10-04).
+- User-supplied original: `181563__kingsrow__fire-crackling-01.wav`, 34.210839 seconds, stereo 44.1 kHz 16-bit PCM. The supplied original is not altered.
+- Delivery: lossless FLAC, same sample rate, channel count and 16-bit depth. No lossy codec, synthetic noise, added recording or spectral denoising.
+- Preparation: gentle 100 Hz high-pass; local 320 Hz high-pass and −4.44 dB clip gain around the low-frequency tail (smooth 28.55–33.05 s window); local reduction of the exceptional 5.81 s transient and short transparent clip-gain envelopes over remaining isolated high peaks. A single fixed +8 dB delivery gain is applied to the whole recording. No per-excerpt normalization or continuous compression.
+- Playback: ONE 31.810839-second continuous bed. A 2.4-second raised-cosine seam is baked into its buffer before playback; it never requires two looping sources. Twelve short 0.24–0.29 s events are extracted from the same decoded recording with boundary fades, without individual normalization. Event selection avoids recent repeats; random waits, slight gain differences, a hard quiet gap and a one-event-at-a-time policy prevent rhythmic/phasey stacking. No medium pops below 65% intensity.
+- Detailed source hash, timeline positions, gain edits and measured before/after levels: `fireplace-kingsrow-v1.json`. Reproduce with `scripts/prepare-fire-audio.py` and the original upload.
+- Previous recordings below are retained only as inactive historical assets; the Fireplace no longer requests or plays them.
+
+## Previous Fireplace — v3, inactive
 
 `fireplace-wood-v3.wav`: “Fireplace Sound loop” by PagDev, OpenGameArt.
 

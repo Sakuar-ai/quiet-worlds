@@ -6,19 +6,19 @@ import {resolve,extname} from 'node:path';
 import assert from 'node:assert/strict';
 import {fireParameters} from '../dist/fireplace.js';
 
-const baseline='c482fd4bf08bdca813d44e29bc5899d8b38253f3';
+const baseline='bf2aa8501f834233dd4d7ad0eaea9bd276019546';
 const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{encoding:'utf8'});
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
-// Only the Fireplace module cache key and its extra poetic subtitle change.
-assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-11').replace('labels: ["Embers", "Roaring Fire"], whisper: ""','labels: ["Embers", "Roaring Fire"], whisper: "Warmth with nowhere else to be."'),oldApp);
+// Only Fireplace audio configuration/backend/imports change in this pass.
+const visualApp=source=>source.replace(/^import .*;\n/gm,'').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
+assert.equal(visualApp(app),visualApp(oldApp));
 assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
 assert.equal(readFileSync('dist/world-art.js','utf8'),previous('world-art.js'));
 const oldFire=previous('fireplace.js'),fire=readFileSync('dist/fireplace.js','utf8');
-const mix=source=>source.slice(source.indexOf('export function fireMix'),source.indexOf('export class FireplaceRenderer')).trim();
-assert.equal(mix(fire),mix(oldFire));
+assert.equal(fire,oldFire.replace(/export function fireMix[\s\S]*?(?=export class FireplaceRenderer)/,''),'only remove obsolete mixer helper; approved drawing unchanged');
 const pigment=source=>source.slice(source.indexOf('function drawFirelight'),source.indexOf('export function fireParameters'));
 assert.equal(pigment(fire),pigment(oldFire),'approved environment marks are not redrawn; no extra objects');
 const {fireParameters:oldParameters}=await import('data:text/javascript;base64,'+Buffer.from(oldFire).toString('base64'));
@@ -32,7 +32,7 @@ assert.deepEqual(fireParameters(-1),fireParameters(0));assert.deepEqual(firePara
 const sparkCode=source=>source.slice(source.indexOf('this.sparks.forEach'),source.indexOf('this.parameters=p'));
 assert.equal(sparkCode(fire),sparkCode(oldFire),'spark system stays byte-identical');
 
-const dir=resolve('dist'),mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.wav':'audio/wav','.mp3':'audio/mpeg'};
+const dir=resolve('dist'),mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.wav':'audio/wav','.mp3':'audio/mpeg','.flac':'audio/flac','.json':'application/json'};
 const server=createServer((req,res)=>{try{const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname),file=resolve(dir,'.'+(name==='/'?'/index.html':name));if(!file.startsWith(dir+'/'))throw Error('Invalid path');res.setHeader('Content-Type',mime[extname(file)]||'application/octet-stream');res.end(readFileSync(file));}catch{res.writeHead(404);res.end();}});
 await new Promise(done=>server.listen(0,'127.0.0.1',done));
 const url=`http://127.0.0.1:${server.address().port}/`;
@@ -174,10 +174,7 @@ try {
         const [before,after]=states;
         assert.equal(after.nodeCount,before.nodeCount,'redistribute existing shapes, never add texture or detail');
         assert.equal(after.main.length,7);assert.equal(after.lower.length,4);assert.equal(after.contacts.length,3);
-        assert.ok(after.main[0].width>before.main[0].width*1.15,'middle fire has connected broader shoulders, not just taller tips');
-        assert.ok(after.main[0].height<before.main[0].height*1.05,'do not simply enlarge the whole main flame');
-        assert.ok(after.lower[0].x<before.lower[0].x-50&&after.lower[3].x>before.lower[3].x+50,'existing small roots reach both wood edges');
-        assert.ok(after.contacts.every((p,n)=>p.height>before.contacts[n].height*1.5),'small/medium flame activity distributed through wood clefts');
+        assert.deepEqual(after,before,'audio-only pass: combustion shapes remain identical');
         assert.ok(after.bedZones.every(n=>n>=3),'ember bed has separated uneven heat islands, no continuous strip');
         distribution.push({intensity,before,after});
       }

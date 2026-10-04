@@ -38,6 +38,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Compare Rain and Fireplace on iPhone viewports
         run: npm run test:ui
+      - name: Verify single-bed Fireplace audio and render listening samples
+        run: npm run test:audio
       - name: Save viewport screenshots and measurements
         if: always()
         uses: actions/upload-artifact@v4

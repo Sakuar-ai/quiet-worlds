@@ -1,4 +1,5 @@
-import { FireplaceRenderer, fireMix } from './fireplace.js?v=phase2a-12';
+import { FireplaceRenderer } from './fireplace.js?v=phase2a-12';
+import { FireplaceAudio, prepareFireRecording } from './fireplace-audio.js?v=audio-13';
 import { worldArt, FIRE_MARK } from './world-art.js?v=phase2a-2';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
@@ -35,9 +36,7 @@ const SCENES = {
     descriptions: ["A few embers are breathing.", "The fire is gently unfolding.", "The logs are speaking brightly."],
     aria: "A simple hand-drawn brick fireplace with small moving flames",
     audio: [
-      { label: "soft ember body", kind: "recording", url: "./audio/fireplace-wood-v3.wav", start: 1, duration: 24, profile: "soft-fire", lowCut: 220, highCut: 1800, gain: .85 },
-      { label: "gentle wood crackle", kind: "recording", url: "./audio/fireplace-wood-v3.wav", start: 3, duration: 23, profile: "soft-fire", lowCut: 500, highCut: 5400, gain: .7 },
-      { label: "full steady fire", kind: "recording", url: "./audio/fireplace-wood-v3.wav", start: 5, duration: 22, profile: "soft-fire", lowCut: 220, highCut: 6200, gain: .75 }
+      { label: "single natural fire bed with sparse crackle events", kind: "fireplace", url: "./audio/fireplace-kingsrow-v1.flac", manifest: "./audio/fireplace-kingsrow-v1.json" }
     ]
   },
   forest: {
@@ -327,7 +326,7 @@ class AudioMixer {
     if (!this.context) this.createContext();
     await this.context.resume();
     if(this.currentScene!==scene.config.id){
-      const buffers=await Promise.all(scene.config.audio.map(layer=>layer.kind==="recording"?this.loadRecording(layer.url,layer):null));
+      const buffers=await Promise.all(scene.config.audio.map(layer=>layer.kind==="fireplace"?this.loadFireRecording(layer):layer.kind==="recording"?this.loadRecording(layer.url,layer):null));
       if(request!==this.request) return false;
       this.buildScene(scene.config,buffers);
     }
@@ -335,12 +334,14 @@ class AudioMixer {
     this.master.gain.setTargetAtTime(.54, this.context.currentTime, .18);
     this.isPlaying = true;
     this.update(scene.intensity);
+    this.fireAudio?.play();
     return true;
   }
 
   pause() {
     this.request++;
     this.isPlaying = false;
+    this.fireAudio?.pause();
     if (!this.context) return;
     this.master.gain.setTargetAtTime(0, this.context.currentTime, .12);
   }
@@ -358,9 +359,16 @@ class AudioMixer {
     if (!this.context) return;
     const oldBus = this.sceneBus;
     if (oldBus) { oldBus.gain.setTargetAtTime(0, this.context.currentTime, .12); setTimeout(() => oldBus.disconnect(), 2200); }
-    this.layers.forEach(({ source }) => source.stop(this.context.currentTime + 2));
+    this.fireAudio?.dispose();this.fireAudio=null;
+    this.layers.filter(layer=>!layer.fireBed).forEach(({ source }) => source.stop(this.context.currentTime + 2));
     this.sceneBus = this.context.createGain(); this.sceneBus.gain.value = 0; this.sceneBus.connect(this.master);
-    this.layers = config.audio.map((layer,index) => layer.kind==="recording"?this.createRecordingLayer(layer,buffers[index]):this.createNoiseLayer(layer));
+    this.layers = config.audio.map((layer,index) => {
+      if(layer.kind==='fireplace'){
+        this.fireAudio=new FireplaceAudio(this.context,this.sceneBus,buffers[index]);
+        return {source:this.fireAudio.source,gain:this.fireAudio.gain,fireBed:true};
+      }
+      return layer.kind==="recording"?this.createRecordingLayer(layer,buffers[index]):this.createNoiseLayer(layer);
+    });
     this.sceneBus.gain.setTargetAtTime(1, this.context.currentTime, .2);
     this.currentScene = config.id;
   }
@@ -388,23 +396,9 @@ class AudioMixer {
             output[n]=value;power+=value*value;
           }
         }
-        if(options.profile === 'soft-fire') {
-          // Two gentle high-pass stages remove handling/low-end knocks before
-          // normalization. Warm the filter with one loop to avoid a startup edge.
-          power=0;
-          const alpha=1-Math.exp(-2*Math.PI*180/rate);
-          for(let ch=0;ch<loop.numberOfChannels;ch++) {
-            const samples=loop.getChannelData(ch); let low1=0,low2=0;
-            for(let pass=0;pass<2;pass++) for(let n=0;n<length;n++) {
-              const value=samples[n];low1+=alpha*(value-low1);
-              const high=value-low1;low2+=alpha*(high-low2);
-              if(pass===1) { samples[n]=high-low2; power+=samples[n]*samples[n]; }
-            }
-          }
-        }
         const rms=Math.sqrt(power/(length*original.numberOfChannels));
-        const gain=(options.profile === 'soft-fire' ? .12 : .13)/Math.max(rms,.0001);
-        const ceiling=options.profile === 'soft-fire' ? .24 : .72;
+        const gain=.13/Math.max(rms,.0001);
+        const ceiling=.72;
         // Soften isolated close-mic impacts without turning the entire rain bed down.
         for(let ch=0;ch<loop.numberOfChannels;ch++){
           const samples=loop.getChannelData(ch);
@@ -418,6 +412,14 @@ class AudioMixer {
       loading.catch(()=>this.buffers.delete(key));
     }
     return this.buffers.get(key);
+  }
+
+  async loadFireRecording(layer) {
+    if(!this.buffers.has(layer.url)){
+      const loading=Promise.all([fetch(layer.url).then(r=>{if(!r.ok)throw Error('Fire recording could not load');return r.arrayBuffer();}).then(b=>this.context.decodeAudioData(b)),fetch(layer.manifest).then(r=>{if(!r.ok)throw Error('Fire event data could not load');return r.json();})]).then(([original,manifest])=>prepareFireRecording(this.context,original,manifest));
+      this.buffers.set(layer.url,loading);loading.catch(()=>this.buffers.delete(layer.url));
+    }
+    return this.buffers.get(layer.url);
   }
 
   createRecordingLayer(layer,buffer) {
@@ -447,7 +449,7 @@ class AudioMixer {
     if (!this.context || !this.layers.length) return;
     this.intensity = intensity;
     if(this.currentScene === 'fireplace') {
-      fireMix(intensity).forEach((mix,index) => this.layers[index].gain.gain.setTargetAtTime(mix * this.layers[index].maxGain, this.context.currentTime, .4));
+      this.fireAudio.update(intensity);
       return;
     }
     if(this.currentScene==="rain"){

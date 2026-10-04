@@ -61,14 +61,6 @@ export function fireParameters(intensity) {
   };
 }
 
-export function fireMix(intensity) {
-  const i = clampFire(intensity);
-  // A remains present throughout; B and then C enter continuously.
-  const weights = [1 - .28 * i, .95 * smoothFire(i / .65), .95 * smoothFire((i - .42) / .58)];
-  const power = Math.hypot(...weights);
-  return weights.map(value => value / power);
-}
-
 export class FireplaceRenderer {
   constructor(parent) {
     this.element = document.createElement('div');

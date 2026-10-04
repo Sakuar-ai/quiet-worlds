@@ -1,0 +1,184 @@
+{
+  "source": "181563__kingsrow__fire-crackling-01.wav",
+  "sourceSHA256": "bfc43371d595b1e7e6204f961cd27ae445b1f60aa69a227c2a94c4d74d7c9ca5",
+  "url": "./audio/fireplace-kingsrow-v1.flac",
+  "sampleRate": 44100,
+  "channels": 2,
+  "duration": 34.210839002267576,
+  "crossfadeSeconds": 2.4,
+  "deliveryGainDB": 8,
+  "events": [
+    {
+      "start": 0.56,
+      "duration": 0.26,
+      "size": "small"
+    },
+    {
+      "start": 2.08,
+      "duration": 0.24,
+      "size": "small"
+    },
+    {
+      "start": 3.32,
+      "duration": 0.29,
+      "size": "small"
+    },
+    {
+      "start": 8.4,
+      "duration": 0.25,
+      "size": "small"
+    },
+    {
+      "start": 9.14,
+      "duration": 0.29,
+      "size": "small"
+    },
+    {
+      "start": 15.66,
+      "duration": 0.27,
+      "size": "small"
+    },
+    {
+      "start": 17.87,
+      "duration": 0.25,
+      "size": "small"
+    },
+    {
+      "start": 23.34,
+      "duration": 0.26,
+      "size": "small"
+    },
+    {
+      "start": 10.44,
+      "duration": 0.28,
+      "size": "medium"
+    },
+    {
+      "start": 11.61,
+      "duration": 0.29,
+      "size": "medium"
+    },
+    {
+      "start": 18.68,
+      "duration": 0.28,
+      "size": "medium"
+    },
+    {
+      "start": 26.77,
+      "duration": 0.29,
+      "size": "medium"
+    }
+  ],
+  "processing": {
+    "globalHighPassHz": 100,
+    "localHighPassHz": 320,
+    "localWindow": [
+      28.55,
+      29,
+      32.4,
+      33.05
+    ],
+    "localGainDB": -4.436974992327128,
+    "exceptionalPopWindow": [
+      5.7,
+      5.78,
+      6.08,
+      6.22
+    ],
+    "exceptionalPopGainDB": -15.917600346881503,
+    "isolatedPeakEdits": [
+      {
+        "time": 6.165192743764172,
+        "gainDB": -9.767440994506645
+      },
+      {
+        "time": 7.569591836734694,
+        "gainDB": -4.311899919949618
+      },
+      {
+        "time": 9.203968253968254,
+        "gainDB": -0.20967351720608907
+      },
+      {
+        "time": 10.505510204081633,
+        "gainDB": -1.9768667098517074
+      },
+      {
+        "time": 11.673197278911564,
+        "gainDB": -1.3901270550460434
+      },
+      {
+        "time": 13.44859410430839,
+        "gainDB": -0.18268829103633577
+      },
+      {
+        "time": 13.626462585034014,
+        "gainDB": -3.9446959285241903
+      },
+      {
+        "time": 13.955873015873015,
+        "gainDB": -0.20037874992022311
+      },
+      {
+        "time": 18.744829931972788,
+        "gainDB": -3.448407651317466
+      },
+      {
+        "time": 20.741859410430838,
+        "gainDB": -1.3918645839528108
+      },
+      {
+        "time": 20.904739229024944,
+        "gainDB": -1.4338758483024439
+      },
+      {
+        "time": 26.83641723356009,
+        "gainDB": -1.9879311503466235
+      },
+      {
+        "time": 30.718208616780046,
+        "gainDB": -4.242197222598904
+      }
+    ],
+    "denoise": false,
+    "RMSNormalization": false,
+    "compression": false
+  },
+  "analysis": {
+    "source": {
+      "peakDBFS": -4.68287596435793,
+      "rmsDBFS": -41.464663367911484,
+      "low150RMSDBFS": -42.787617395719444
+    },
+    "cleanBeforeDeliveryGain": {
+      "peakDBFS": -19.576214018601238,
+      "rmsDBFS": -49.26038791574318,
+      "low150RMSDBFS": -54.261400776932135
+    },
+    "delivered": {
+      "peakDBFS": -11.576214018601238,
+      "rmsDBFS": -41.26038791574318,
+      "low150RMSDBFS": -46.261400776932135
+    },
+    "popBefore": {
+      "peakDBFS": -4.68287596435793,
+      "rmsDBFS": -38.85818439548256,
+      "low150RMSDBFS": -49.16964180560721
+    },
+    "popAfter": {
+      "peakDBFS": -19.576214018601238,
+      "rmsDBFS": -54.13905141630649,
+      "low150RMSDBFS": -65.42410780038479
+    },
+    "tailBefore": {
+      "peakDBFS": -10.485363545836893,
+      "rmsDBFS": -32.78089488669579,
+      "low150RMSDBFS": -33.68084248270467
+    },
+    "tailAfter": {
+      "peakDBFS": -19.576214018601238,
+      "rmsDBFS": -48.48275723847324,
+      "low150RMSDBFS": -61.202607781701246
+    }
+  }
+}

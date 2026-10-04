@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 // This app ships source modules directly; the static build validates the exact
 // deployment directory without rewriting Rain, audio files or other assets.
-for (const file of ['app.js','fireplace.js','world-art.js']) {
+for (const file of ['app.js','fireplace.js','fireplace-audio.js','world-art.js']) {
   const result=spawnSync(process.execPath,['--input-type=module','--check'],{input:readFileSync('dist/'+file),encoding:'utf8'});
   assert.equal(result.status,0,`${file}: ${result.stderr}`);
 }
@@ -14,6 +14,9 @@ for(const [,path] of html.matchAll(/(?:src|href)="\.\/([^"?]+)(?:\?[^"]*)?"/g)) 
 }
 const app=readFileSync('dist/app.js','utf8');
 for(const [,path] of app.matchAll(/url: "\.\/([^"]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing audio: ${path}`);
+assert.ok(!app.includes('soft-fire')&&!app.includes('fireMix('),'retire the three normalized Fireplace excerpts');
+const fireAudio=readFileSync('dist/fireplace-audio.js','utf8');
+assert.equal((fireAudio.match(/\.loop=true/g)||[]).length,1,'exactly one continuous bed implementation');
 const fire=readFileSync('dist/fireplace.js','utf8');
 for(const [,path] of fire.matchAll(/href="\.\/([^"?#]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing fireplace asset: ${path}`);
 for(const layer of ['fire-environment','firelight-field','firelight-hearth','fire-structure','fire-glow','fire-coal-bed','fire-lower-flames','fire-flames','fire-log-interleave','fire-logs','fire-log-heat','fire-seam-embers','fire-embers','fire-sparks']) assert.ok(fire.includes(layer),`Missing independent layer: ${layer}`);
