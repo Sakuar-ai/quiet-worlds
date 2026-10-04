@@ -92,27 +92,43 @@ export class FireplaceRenderer {
         <defs>
           <image id="fire-pencil-art" href="./art/fireplace-reference-v6.png" width="1536" height="1024"/>
           <path id="fire-front-log-shape" d="M607 712Q762 663 947 614Q965 617 976 648L978 677Q822 727 627 770Q603 767 601 741Q600 723 607 712Z"/>
+          <path id="fire-rear-log-shape" d="M590 615Q674 647 787 662L730 691Q651 693 573 670Q570 646 590 615Z"/>
+          <path id="fire-cross-log-shape" d="M547 689Q620 684 690 701L753 714Q861 694 986 704Q1006 695 1025 706Q1042 723 1043 743Q1041 765 1025 773Q1009 779 993 769Q875 752 757 738L627 748Q580 774 541 773Q517 766 514 741Q514 709 547 689Z"/>
           <clipPath id="fire-front-log"><use href="#fire-front-log-shape"/></clipPath>
+          <clipPath id="fire-rear-log"><use href="#fire-rear-log-shape"/></clipPath>
+          <clipPath id="fire-cross-log"><use href="#fire-cross-log-shape"/></clipPath>
+          <clipPath id="fire-all-logs"><use href="#fire-rear-log-shape"/><use href="#fire-cross-log-shape"/><use href="#fire-front-log-shape"/></clipPath>
           <mask id="fire-behind-front-log" maskUnits="userSpaceOnUse" x="0" y="0" width="1536" height="1024"><rect width="1536" height="1024" fill="white"/><use href="#fire-front-log-shape" fill="black"/></mask>
+          <mask id="fire-between-logs" maskUnits="userSpaceOnUse" x="400" y="570" width="720" height="250"><rect x="400" y="570" width="720" height="250" fill="white"/><g fill="black"><use href="#fire-rear-log-shape"/><use href="#fire-cross-log-shape"/><use href="#fire-front-log-shape"/></g></mask>
+          <filter id="fire-soften-hatching" color-interpolation-filters="sRGB" x="-1%" y="-1%" width="102%" height="102%"><feGaussianBlur in="SourceGraphic" stdDeviation="4" result="pigment"/><feComposite in="SourceGraphic" in2="pigment" operator="arithmetic" k2=".82" k3=".18" result="softened"/><feComposite in="softened" in2="SourceGraphic" operator="atop"/></filter>
           <clipPath id="fire-cavity"><path d="M365 798 366 386Q580 253 776 260Q980 254 1208 384L1208 799Z"/></clipPath>
           <filter id="fire-pencil" x="-4%" y="-4%" width="108%" height="108%"><feTurbulence type="fractalNoise" baseFrequency=".14" numOctaves="3" seed="14" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="3.2" result="rough"/><feColorMatrix in="grain" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .333 .333 .334 0 0"/><feComponentTransfer><feFuncA type="table" tableValues=".45 .85 1 1 1"/></feComponentTransfer><feComposite in="rough" operator="in"/></filter>
           <pattern id="fire-hatch" patternUnits="userSpaceOnUse" width="29" height="33" patternTransform="rotate(-12)"><path d="m2 23 7-12m9 21 8-16m-9-9 3-4" stroke="#fff2c8" stroke-width="2.4" stroke-linecap="round" opacity=".66"/><path d="m4 29 3-5m12-10 2-4" stroke="#ca6a36" stroke-width="1.4" opacity=".38"/></pattern>
           <pattern id="ember-hatch" patternUnits="userSpaceOnUse" width="23" height="19"><path d="m2 8 12-2m-5 9 9-2" stroke="#ed9b50" stroke-width="3" stroke-linecap="round"/><path d="m4 9 4-1" stroke="#ffda87" stroke-width="2"/></pattern>
         </defs>
-        <g class="fire-structure fire-rear-logs"><use href="#fire-pencil-art" mask="url(#fire-behind-front-log)"/></g>
+        <g class="fire-structure"><use href="#fire-pencil-art" mask="url(#fire-behind-front-log)"/></g>
+        <g class="fire-rear-logs"><use href="#fire-pencil-art" clip-path="url(#fire-rear-log)"/></g>
         <rect class="fire-masonry-bounds" x="136" y="84" width="1278" height="858" fill="none" pointer-events="none"/>
         <g class="fire-live-interior" clip-path="url(#fire-cavity)">
           <g class="fire-glow" filter="url(#fire-pencil)">
-            <path d="M482 779Q533 732 655 731Q764 692 895 732Q1019 730 1083 781Q955 808 801 802Q600 810 482 779Z" fill="#d96b32" opacity=".52"/>
-            <path d="M558 784Q645 758 715 761Q849 729 994 784Q837 802 558 784Z" fill="url(#ember-hatch)"/>
-            <path d="m588 618 80 26m-131 48 88 14m229 24 108 24" fill="none" stroke="#ec9850" stroke-width="7" opacity=".44" stroke-linecap="round"/>
+            <path d="M510 778Q551 747 626 749Q685 732 748 750Q827 730 898 747Q1002 741 1065 779L1035 790 998 787 956 799 913 791 868 801 817 793 778 802 734 792 683 799 646 788 598 795 555 785Z" fill="#bd512e" opacity=".9"/>
+            <path d="M553 779Q647 745 733 768Q817 744 1009 778L972 787 930 780 881 791 831 781 784 794 729 780 683 790 631 779 584 787Z" fill="#e78b43" opacity=".78"/>
+            <path d="M563 780Q647 765 715 770Q849 748 1001 781Q837 798 563 780Z" fill="url(#ember-hatch)"/>
+            <path d="M635 707Q687 681 718 704L751 735 727 771 695 753 673 766 651 744Z M791 698Q849 680 913 706L900 751 863 769 833 744 806 755Z" fill="#d66b32" opacity=".5"/>
+            <g class="fire-coal-bed"></g>
           </g>
           <g class="fire-lower-flames" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
           <g class="fire-flames" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
           <g class="fire-flame-grain"></g>
         </g>
+        <g class="fire-log-interleave"><use href="#fire-pencil-art" clip-path="url(#fire-cross-log)"/></g>
         <g class="fire-logs"><use href="#fire-pencil-art" clip-path="url(#fire-front-log)"/></g>
-        <path class="fire-log-rim" d="M626 716Q787 665 945 627" fill="none" stroke="#f7ad61" stroke-width="5" stroke-linecap="round" stroke-dasharray="23 14 6 11 37 17"/>
+        <g class="fire-log-heat" clip-path="url(#fire-all-logs)" fill="none" stroke-linecap="round" filter="url(#fire-pencil)">
+          <path d="M584 659Q659 688 716 690M554 751Q613 744 670 735M791 739Q907 756 983 763M632 758Q782 719 959 667" stroke="#763c29" stroke-width="14" opacity=".66"/>
+          <path d="M590 623Q659 650 754 671M552 695Q610 694 658 707M824 711Q902 704 981 714M627 718Q777 671 946 629" stroke="#d87638" stroke-width="15" opacity=".7" stroke-dasharray="43 8 29 12 17 7"/>
+          <path class="fire-log-rim" d="M597 628Q661 652 744 673M568 698L621 702M841 713Q912 709 973 717M637 720Q793 669 941 634" stroke="#f6b965" stroke-width="6" stroke-dasharray="27 9 8 13 35 11"/>
+        </g>
+        <g class="fire-seam-embers" mask="url(#fire-between-logs)" stroke-linecap="round" filter="url(#fire-pencil)"></g>
         <g class="fire-embers" stroke-linecap="round" filter="url(#fire-pencil)"></g>
         <g class="fire-sparks" fill="none" stroke-linecap="round" stroke-linejoin="round"></g>
       </svg>
@@ -132,11 +148,21 @@ export class FireplaceRenderer {
     this.flames = colors.map((color,n) => add('.fire-flames','path',{fill:color,stroke:n<3?'#df7142':'#f6c46d','stroke-width':2.5}));
     this.flameGrain = colors.map(() => add('.fire-flame-grain','path',{fill:'url(#fire-hatch)'}));
     this.lowerFlames = Array.from({length:4},(_,n)=>add('.fire-lower-flames','path',{fill:n%2?'#f8bc68':'#df793d',stroke:'#eb994e','stroke-width':1.8}));
+    this.coals = Array.from({length:13},(_,n)=>{
+      const x=559+(n*73%448),y=762+(n*11%29),w=5+n%4*2;
+      return add('.fire-coal-bed','path',{d:`M${x-w} ${y}l${w*.7} -4 ${w*1.1} 1 ${w*.6} 5 -${w} 3 -${w*.8} -1Z`,fill:n%3?'#e57b37':'#873923',stroke:n%3?'#f4b458':'#c9612d','stroke-width':2});
+    });
+    this.seamEmbers = Array.from({length:9},(_,n)=>{
+      const x=638+n*35,y=714+(n*19%54);
+      return add('.fire-seam-embers','path',{d:`M${x} ${y}q5 -4 ${9+n%3*2} -${2+n%2*3}`,fill:'none',stroke:n%2?'#f3b15b':'#dd6e32','stroke-width':4+n%3});
+    });
     this.embers = Array.from({length:16},(_,n)=>add('.fire-embers','path',{d:`M${535+(n*79%466)} ${768+(n*13%32)}l${5+n%4*2} ${n%2?-3:2}`,stroke:n%3?'#ec9850':'#f9d082','stroke-width':3+n%3}));
     this.sparks = Array.from({length:16},(_,n)=>add('.fire-sparks','path',{
       stroke:['#ffc56d','#f9aa55','#ffdc91'][n%3],'stroke-width':6+n%3*.5
     }));
     this.glow = this.element.querySelector('.fire-glow');
+    this.structureArt = this.element.querySelector('.fire-structure use');
+    this.logHeat = this.element.querySelector('.fire-log-heat');
     this.logRim = this.element.querySelector('.fire-log-rim');
     this.time=0;this.sparkTime=0;this.last=null;this.visible=false;
     this.update(0,0,true);
@@ -146,6 +172,7 @@ export class FireplaceRenderer {
     this.visible=visible;
     // Do not composite a filtered light field underneath unrelated worlds.
     this.environment.style.display=visible?'':'none';
+    this.structureArt.setAttribute('filter',visible?'url(#fire-soften-hatching)':'none');
     this.element.classList.toggle('is-active',visible);
     this.element.setAttribute('aria-hidden',String(!visible));
   }
@@ -173,12 +200,18 @@ export class FireplaceRenderer {
       this.flameGrain[n].setAttribute('d',d);this.flameGrain[n].setAttribute('opacity',presence*.7);
     });
     this.lowerFlames.forEach((node,n)=>{
-      const x=588+n*116,b=782-(n%2)*13,h=(9+i*78)*(1+.09*Math.sin(t*1.8+n)),w=7+i*16;
+      // Uneven roots sit in different clefts; the cross/front log cutouts break
+      // their silhouettes into visible tongues rather than four floating flames.
+      const x=[638,726,844,925][n],b=[779,773,780,771][n],h=(10+i*[82,94,87,74][n])*(1+.09*Math.sin(t*1.8+n)),w=8+i*17;
       node.setAttribute('d',`M${x-w} ${b}Q${x-w*1.5} ${b-h*.4} ${x} ${b-h}Q${x+w*.2} ${b-h*.38} ${x+w} ${b-h*.5}Q${x+w*1.8} ${b} ${x-w} ${b}Z`);
       node.setAttribute('opacity',(.38+i*.45)*(n%2?.8:1));
     });
-    this.glow.setAttribute('opacity',p.emberGlow*(.95+.05*Math.sin(t*.7)));
-    this.logRim.setAttribute('opacity',.08+i*.41);
+    const combustion=(.27+i*.54)*(.95+.05*Math.sin(t*.7));
+    this.glow.setAttribute('opacity',combustion);
+    this.logHeat.setAttribute('opacity',.16+i*.54);
+    this.logRim.setAttribute('opacity',.4+i*.42);
+    this.coals.forEach((node,n)=>node.setAttribute('opacity',.62+.25*Math.sin(t*.7+n*1.9)**2));
+    this.seamEmbers.forEach((node,n)=>node.setAttribute('opacity',combustion*(.68+.23*Math.sin(t*.7+n*1.9)**2)));
     this.embers.forEach((node,n)=>node.setAttribute('opacity',p.emberGlow*(.75+.25*Math.sin(t*(.9+n*.03)+n*2)**2)));
     this.sparks.forEach((node,n)=>{
       // Broad, overlapping lifetimes prevent empty medium-intensity frames.

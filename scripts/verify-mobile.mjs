@@ -6,12 +6,12 @@ import {resolve,extname} from 'node:path';
 import assert from 'node:assert/strict';
 import {fireParameters} from '../dist/fireplace.js';
 
-const baseline='fcbb695ba74586759d529ab656ebb20a9a53b456';
+const baseline='757e56899c3df702ea8038a7829d1112e06245a7';
 const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{encoding:'utf8'});
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
 // No behavior or audio code is changed; only the Fireplace module cache key.
-assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-8'),oldApp);
+assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-9'),oldApp);
 assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
@@ -25,13 +25,12 @@ const {fireParameters:oldParameters}=await import('data:text/javascript;base64,'
 const responseKeys=['flameHeight','flameWidthVariation','flameMovement','emberGlow','sparkCount','sparkDuty','lightSpread','lightOpacity','hearthLight','hearthSpreadX','hearthSpreadY'];
 for(let step=0;step<=100;step++){
   const p=fireParameters(step/100),previous=fireParameters((step-1)/100);
+  assert.deepEqual(p,oldParameters(step/100),'approved atmosphere, sparks and main-fire response parameters are unchanged');
   for(const key of responseKeys)assert.ok(Number.isFinite(p[key])&&p[key]>=previous[key],`${key}: finite continuous monotonic response`);
 }
 assert.deepEqual(fireParameters(-1),fireParameters(0));assert.deepEqual(fireParameters(2),fireParameters(1));
-const currentHigh=fireParameters(1),oldHigh=oldParameters(1);
-assert.ok(currentHigh.lightSpread>oldHigh.lightSpread&&currentHigh.lightSpread/oldHigh.lightSpread<1.15);
-assert.ok(currentHigh.lightOpacity>oldHigh.lightOpacity&&currentHigh.lightOpacity<=.85);
-assert.ok(currentHigh.flameHeight/oldHigh.flameHeight<1.1&&currentHigh.flameMovement>oldHigh.flameMovement);
+const sparkCode=source=>source.slice(source.indexOf('this.sparks.forEach'),source.indexOf('this.parameters=p'));
+assert.equal(sparkCode(fire),sparkCode(oldFire),'spark system stays byte-identical');
 
 const dir=resolve('dist'),mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.wav':'audio/wav','.mp3':'audio/mpeg'};
 const server=createServer((req,res)=>{try{const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname),file=resolve(dir,'.'+(name==='/'?'/index.html':name));if(!file.startsWith(dir+'/'))throw Error('Invalid path');res.setHeader('Content-Type',mime[extname(file)]||'application/octet-stream');res.end(readFileSync(file));}catch{res.writeHead(404);res.end();}});
@@ -116,7 +115,7 @@ try {
       const state=await current.page.evaluate(i=>{
         const q=window.__sceneQA,f=q.renderer.fireplace;q.renderer.scene.setIntensity(i);q.slider.set(i);document.querySelector('#intensity-description').textContent=q.intensityText(q.renderer.scene,i);f.last=null;f.update(0,i);
         const box=f.lightField.getBoundingClientRect(),hearth=f.hearthLight.getBoundingClientRect();
-        return {intensity:i,opacity:Number(f.lightField.getAttribute('opacity')),width:box.width,height:box.height,hearthOpacity:Number(f.hearthLight.getAttribute('opacity')),hearthBottom:hearth.bottom,paths:f.lightField.querySelectorAll('path').length,background:getComputedStyle(document.querySelector('.app')).backgroundColor,parameters:{...f.parameters}};
+        return {intensity:i,opacity:Number(f.lightField.getAttribute('opacity')),width:box.width,height:box.height,hearthOpacity:Number(f.hearthLight.getAttribute('opacity')),hearthBottom:hearth.bottom,bedOpacity:Number(f.glow.getAttribute('opacity')),logHeatOpacity:Number(f.logHeat.getAttribute('opacity')),paths:f.lightField.querySelectorAll('path').length,background:getComputedStyle(document.querySelector('.app')).backgroundColor,parameters:{...f.parameters}};
       },intensity);
       atmosphere.push(state);
       assert.equal(state.background,'rgb(251, 251, 252)');
@@ -127,19 +126,39 @@ try {
     for(let n=1;n<atmosphere.length;n++){
       assert.ok(atmosphere[n].opacity>atmosphere[n-1].opacity&&atmosphere[n].width>atmosphere[n-1].width,'firelight expands and strengthens continuously');
       assert.ok(atmosphere[n].hearthOpacity>atmosphere[n-1].hearthOpacity,'reflected hearth warmth follows intensity');
+      assert.ok(atmosphere[n].bedOpacity>atmosphere[n-1].bedOpacity&&atmosphere[n].logHeatOpacity>atmosphere[n-1].logHeatOpacity,'ember bed and heated log edges respond together');
     }
     assert.ok(atmosphere[2].width/atmosphere[0].width>1.9,'clearly wider light spread from embers to roaring');
     assert.ok(atmosphere[0].opacity<.13&&atmosphere[2].opacity>.8&&atmosphere[2].opacity<=.85,'faint low end, bounded stronger high end');
     assert.ok(atmosphere[1].opacity>.45&&atmosphere[1].opacity<.6,'approved medium warmth remains restrained');
     assert.ok(atmosphere[2].parameters.flameHeight<=440,'fuller fire stays inside the original opening');
-    // Hide only the live response layers in BOTH versions. Static masonry,
-    // rear/front logs, hearth artwork and all layout must remain pixel-identical.
-    const liveLayers='.fire-environment,.fire-live-interior,.fire-log-rim,.fire-embers,.fire-sparks';
+    const integration=await current.page.evaluate(()=>{
+      const q=s=>document.querySelector(s),ordered=['.fire-rear-logs','.fire-glow','.fire-lower-flames','.fire-flames','.fire-log-interleave','.fire-logs','.fire-log-heat','.fire-seam-embers','.fire-embers','.fire-sparks'];
+      return {layerOrder:ordered.every((s,n)=>!n||Boolean(q(ordered[n-1]).compareDocumentPosition(q(s))&Node.DOCUMENT_POSITION_FOLLOWING)),crossClip:q('.fire-log-interleave use').getAttribute('clip-path'),frontClip:q('.fire-logs use').getAttribute('clip-path'),heatClip:q('.fire-log-heat').getAttribute('clip-path'),seamMask:q('.fire-seam-embers').getAttribute('mask'),coals:q('.fire-coal-bed').children.length,seams:q('.fire-seam-embers').children.length,originalWeight:q('#fire-soften-hatching feComposite').getAttribute('k2'),softWeight:q('#fire-soften-hatching feComposite').getAttribute('k3')};
+    });
+    assert.equal(integration.layerOrder,true);assert.equal(integration.crossClip,'url(#fire-cross-log)');assert.equal(integration.frontClip,'url(#fire-front-log)');
+    assert.equal(integration.heatClip,'url(#fire-all-logs)');assert.equal(integration.seamMask,'url(#fire-between-logs)');
+    assert.equal(integration.coals,13);assert.equal(integration.seams,9);assert.equal(integration.originalWeight,'.82');assert.equal(integration.softWeight,'.18');
+    // Disable only this pass's texture attenuation and extra log cutouts, plus
+    // both versions' live response. This must recover the exact approved image.
+    const liveLayers='.fire-environment,.fire-live-interior,.fire-log-rim,.fire-log-heat,.fire-seam-embers,.fire-embers,.fire-sparks';
     for(const page of [old.page,current.page])await page.locator(liveLayers).evaluateAll(nodes=>nodes.forEach(e=>e.style.display='none'));
+    await current.page.locator('.fire-structure use').evaluate(e=>e.removeAttribute('filter'));
+    await current.page.locator('.fire-rear-logs,.fire-log-interleave').evaluateAll(nodes=>nodes.forEach(e=>e.style.display='none'));
     for(const page of [old.page,current.page])await page.evaluate(()=>{const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,.42);});
     const oldScene=await old.page.locator('.world').screenshot(),withoutAtmosphere=await current.page.locator('.world').screenshot();
     assert.ok(oldScene.equals(withoutAtmosphere),`${key}: static fireplace artwork and layout must be pixel-identical`);
+    await current.page.locator('.fire-structure use').evaluate(e=>e.setAttribute('filter','url(#fire-soften-hatching)'));
+    await current.page.locator('.fire-rear-logs,.fire-log-interleave').evaluateAll(nodes=>nodes.forEach(e=>e.style.display=''));
     for(const page of [old.page,current.page])await page.locator(liveLayers).evaluateAll(nodes=>nodes.forEach(e=>e.style.display=''));
+    // Re-render at one shared clock for a meaningful close-up comparison.
+    if(viewport.width===390){
+      for(const [name,page] of [['before',old.page],['after',current.page]]){
+        await page.evaluate(()=>{const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,.42);});
+        const clip=await page.locator('.fire-illustration').evaluate(e=>{const m=e.getScreenCTM(),a=new DOMPoint(400,420).matrixTransform(m),b=new DOMPoint(1130,824).matrixTransform(m);return {x:a.x,y:a.y,width:b.x-a.x,height:b.y-a.y};});
+        await page.screenshot({path:`test-results/burning-logs-${name}.png`,clip});
+      }
+    }
     if(viewport.width===390){
       const sparkStats=await current.page.evaluate(()=>{
         const fire=window.__sceneQA.renderer.fireplace,stats=[];
@@ -200,7 +219,7 @@ try {
     await current.page.locator('#scene-trigger').click();await current.page.locator('[data-world="rain"]').click();
     assert.deepEqual(await measure(current.page),rain,`${key}: round-trip switch has no layout shift`);
     assert.deepEqual(current.errors,[]);assert.deepEqual(old.errors,[]);
-    measurements.push({viewport,layoutMatches:true,rainCanvasPixelsUnchanged:true,staticFireplacePixelsUnchanged:true,atmosphere,pixelDiff,...geometry});
+    measurements.push({viewport,layoutMatches:true,rainCanvasPixelsUnchanged:true,originalArtworkRecoverablePixelIdentical:true,integration,atmosphere,pixelDiff,...geometry});
     console.log(`PASS ${key}: Rain canvas pixel-identical; shared scene/header/slider/control geometry; calm live 0/50/100 fire; no overflow or JS errors. Subject ${(geometry.subjectWidthRatio*100).toFixed(1)}% scene width / ${(geometry.subjectHeightRatio*100).toFixed(1)}% height. UI edge differences: ${JSON.stringify(pixelDiff)}`);
     await old.page.close();await current.page.close();
   }
@@ -216,4 +235,7 @@ try {
   const intensityReport=await browser.newPage({viewport:{width:1210,height:900},deviceScaleFactor:1});
   await intensityReport.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>`+[0,.42,1].map((i,n)=>`<figure><figcaption>${['Embers · 0%','Gentle fire · 42%','Roaring fire · 100%'][n]}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/atmosphere-'+i+'.png').toString('base64')}"/></figure>`).join(''));
   await intensityReport.screenshot({path:'test-results/intensity-comparison.png'});await intensityReport.close();
+  const detailReport=await browser.newPage({viewport:{width:900,height:310},deviceScaleFactor:1});
+  await detailReport.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0;width:440px}figcaption{text-align:center;padding:14px 0}img{width:440px}</style>`+['before','after'].map(name=>`<figure><figcaption>${name==='before'?'Before · 42% intensity':'After · interwoven roots, embers and warm log edges'}</figcaption><img src="data:image/png;base64,${readFileSync('test-results/burning-logs-'+name+'.png').toString('base64')}"/></figure>`).join(''));
+  await detailReport.screenshot({path:'test-results/burning-logs-comparison.png'});await detailReport.close();
 } finally {await browser.close();await new Promise(done=>server.close(done));}
