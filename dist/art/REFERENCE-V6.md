@@ -4,7 +4,7 @@ Created with the built-in image generation tool, using the user's attached `壁�
 
 Asset: [fireplace-reference-v6.png](fireplace-reference-v6.png) (1536×1024 RGBA). Transparent outer pixels preserve the app's neutral white paper. No flames, sparks or animated glow are baked into the image. The same asset supplies masonry, rear logs and a precisely aligned foreground-log cutout; live SVG layers supply fire, ember light, wood-edge illumination and sparks. One image is decoded and reused, not an animation frame sequence.
 
-After clarification the user explicitly chose 40–45% of usable scene width. Masonry bounds x=136..1414 are mapped to 42.5%; loose pencil marks extend slightly beyond the masonry. The Rain scene container and controls are unchanged.
+The v7 scale-only correction supersedes the earlier 42.5% width. The unchanged artwork now uses a centered 84%-wide nested SVG: masonry bounds x=136..1414 map to 69.9% of usable scene width. Loose pencil marks extend slightly beyond the masonry. All live layers share that coordinate space; the Rain scene container and controls are unchanged. A 16-particle spark pool provides staggered, fading pencil marks, normally 3–5 visible at default intensity and 7–12 at maximum, with 0–1 occasional sparks at low intensity.
 
 ## Final generation prompt
 

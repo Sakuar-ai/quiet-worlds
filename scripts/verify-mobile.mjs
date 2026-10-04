@@ -5,12 +5,15 @@ import {execFileSync} from 'node:child_process';
 import {resolve,extname} from 'node:path';
 import assert from 'node:assert/strict';
 
-const baseline='09f9a8e00c6713c540dbe45c7c576e5a8d60d892';
+const baseline='a7d7d68ca07779fe84978f5d0f346b1058f090f9';
 const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{encoding:'utf8'});
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
 // No behavior or audio code is changed; only the Fireplace module cache key.
-assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-4'),oldApp);
+assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-6'),oldApp);
+assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
+const artPath='dist/art/fireplace-reference-v6.png';
+assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
 assert.equal(readFileSync('dist/world-art.js','utf8'),previous('world-art.js'));
 const oldFire=previous('fireplace.js'),fire=readFileSync('dist/fireplace.js','utf8');
 const mix=source=>source.slice(source.indexOf('export function fireMix'),source.indexOf('export class FireplaceRenderer')).trim();
@@ -79,10 +82,44 @@ try {
       return {world,svg:rect(q('.fireplace-world')),subject,subjectWidthRatio:subject.width/world.width,subjectHeightRatio:subject.height/world.height,waterInkFraction:waterInk/(data.length/4),paper:getComputedStyle(q('.app')).backgroundColor,overflow:document.documentElement.scrollWidth>innerWidth};
     });
     assert.deepEqual(geometry.svg,geometry.world,`${key}: SVG and Rain canvas boxes match`);
-    assert.ok(geometry.subjectWidthRatio>=.4&&geometry.subjectWidthRatio<=.45,`${key}: user's explicit 40–45% masonry width`);
-    assert.ok(geometry.subjectHeightRatio>.1&&geometry.subjectHeightRatio<.3,`${key}: natural artwork proportions and white negative space`);
+    assert.ok(geometry.subjectWidthRatio>=.68&&geometry.subjectWidthRatio<=.72,`${key}: target 68–72% masonry width`);
+    assert.ok(geometry.subjectHeightRatio>.2&&geometry.subjectHeightRatio<.4,`${key}: natural artwork proportions and white negative space`);
+    assert.ok(geometry.subject.y>rain['.top-bar'].y+rain['.top-bar'].height,`${key}: white space below header`);
+    assert.ok(geometry.subject.y+geometry.subject.height<rain['.intensity-area'].y,`${key}: hearth must not overlap slider`);
     assert.equal(geometry.paper,'rgb(251, 251, 252)');assert.equal(geometry.overflow,false);
     await current.page.screenshot({path:`test-results/${key}-fireplace.png`});
+    if(viewport.width===390){
+      const sparkStats=await current.page.evaluate(()=>{
+        const fire=window.__sceneQA.renderer.fireplace,stats=[];
+        for(const intensity of [.05,.15,.42,1]){
+          fire.sparkTime=0;fire.last=null;
+          const counts=[],positions=new Set(),shapes=new Set();
+          for(let frame=0;frame<3600;frame++){
+            fire.update(frame*.05,intensity);
+            if(frame%5===0){
+              counts.push(fire.sparks.filter(node=>Number(node.getAttribute('opacity'))>=.15).length);
+              fire.sparks.forEach(node=>{const d=node.getAttribute('d');positions.add(d);shapes.add(d.replace(/[\d.\- ]/g,''));});
+            }
+          }
+          stats.push({intensity,pool:fire.sparks.length,min:Math.min(...counts),max:Math.max(...counts),mean:counts.reduce((a,b)=>a+b)/counts.length,distinctPositions:positions.size,shapes:shapes.size});
+        }
+        return stats;
+      });
+      for(const stat of sparkStats){
+        assert.ok(stat.pool>=12&&stat.pool<=16,'12–16 staggered spark particles');
+        assert.ok(stat.distinctPositions>1000&&stat.shapes>=3,'independent moving pencil marks');
+        if(stat.intensity<=.15){assert.equal(stat.min,0);assert.equal(stat.max,1);}
+        else if(stat.intensity===.42){assert.ok(stat.min>=3&&stat.max<=5);}
+        else {assert.ok(stat.min>=7&&stat.max<=12);}
+      }
+      writeFileSync('test-results/spark-measurements.json',JSON.stringify(sparkStats,null,2));
+      console.log('PASS staggered spark density over 180 simulated seconds:',JSON.stringify(sparkStats));
+      // Sample the default-intensity motion across several genuinely different times.
+      for(const seconds of [0,3,6,9]){
+        await current.page.evaluate(seconds=>{const fire=window.__sceneQA.renderer.fireplace;fire.sparkTime=seconds;fire.last=null;fire.update(seconds,.42);},seconds);
+        await current.page.screenshot({path:`test-results/default-sparks-${seconds}s.png`});
+      }
+    }
     const captures={};
     const staticArtwork=await current.page.locator('.fire-structure').innerHTML(),frontLog=await current.page.locator('.fire-logs').innerHTML();
     for(const intensity of [0,.5,1]){
@@ -105,7 +142,7 @@ try {
   writeFileSync('test-results/mobile-measurements.json',JSON.stringify(measurements,null,2));
   // Actual browser screenshots are shown together without resizing either scene.
   const report=await browser.newPage({viewport:{width:800,height:900},deviceScaleFactor:1});
-  const images=['390x844-rain','390x844-fireplace'].map(name=>`<figure><figcaption>${name.endsWith('rain')?'Approved Rain':'Reference Fireplace · 42.5% width'}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/'+name+'.png').toString('base64')}"/></figure>`).join('');
+  const images=['390x844-rain','390x844-fireplace'].map(name=>`<figure><figcaption>${name.endsWith('rain')?'Approved Rain':'Same artwork · 69.9% masonry width'}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/'+name+'.png').toString('base64')}"/></figure>`).join('');
   await report.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>${images}`);
   await report.screenshot({path:'test-results/iphone-side-by-side.png'});await report.close();
 } finally {await browser.close();await new Promise(done=>server.close(done));}

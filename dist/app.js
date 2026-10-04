@@ -1,4 +1,4 @@
-import { FireplaceRenderer, fireMix } from './fireplace.js?v=phase2a-6';
+import { FireplaceRenderer, fireMix } from './fireplace.js?v=phase2a-7';
 import { worldArt, FIRE_MARK } from './world-art.js?v=phase2a-2';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));

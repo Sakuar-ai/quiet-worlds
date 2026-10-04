@@ -10,7 +10,10 @@ export function fireParameters(intensity) {
     flameMovement: .2 + i * .48,
     flameCount: 1 + i * 6,
     emberGlow: .2 + i * .45,
-    sparkFrequency: .004 + i * i * .33
+    sparkCount: i <= .15 ? .65 + .35 * smoothFire(i / .15)
+      : i <= .42 ? 1 + 4 * smoothFire((i - .15) / .27)
+      : 5 + 7 * smoothFire((i - .42) / .58),
+    sparkDuty: .16 + .84 * smoothFire(i / .32)
   };
 }
 
@@ -27,11 +30,11 @@ export class FireplaceRenderer {
     this.element = document.createElement('div');
     this.element.className = 'fireplace-world';
     this.element.setAttribute('aria-hidden', 'true');
-    // The masonry spans x=136..1414 in the asset. 51.08% * 1278/1536
-    // gives 42.5% of Rain's usable scene width, as explicitly chosen by the user.
+    // Scale the existing artwork and all live layers together: masonry spans
+    // x=136..1414, so 84% * 1278/1536 = 69.9% of Rain's usable scene width.
     // A nested SVG preserves the artwork's aspect ratio without a new canvas layout.
     this.element.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Colored-pencil arched brick fireplace with fire emerging between stacked logs">
-      <svg class="fire-illustration" x="24.46%" y="0" width="51.08%" height="100%" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid meet">
+      <svg class="fire-illustration" x="8%" y="0" width="84%" height="100%" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid meet">
         <defs>
           <image id="fire-pencil-art" href="./art/fireplace-reference-v6.png" width="1536" height="1024"/>
           <path id="fire-front-log-shape" d="M607 712Q762 663 947 614Q965 617 976 648L978 677Q822 727 627 770Q603 767 601 741Q600 723 607 712Z"/>
@@ -57,7 +60,7 @@ export class FireplaceRenderer {
         <g class="fire-logs"><use href="#fire-pencil-art" clip-path="url(#fire-front-log)"/></g>
         <path class="fire-log-rim" d="M626 716Q787 665 945 627" fill="none" stroke="#f7ad61" stroke-width="5" stroke-linecap="round" stroke-dasharray="23 14 6 11 37 17"/>
         <g class="fire-embers" stroke-linecap="round" filter="url(#fire-pencil)"></g>
-        <g class="fire-sparks" fill="none" stroke-linecap="round" filter="url(#fire-pencil)"></g>
+        <g class="fire-sparks" fill="none" stroke-linecap="round" stroke-linejoin="round"></g>
       </svg>
     </svg>`;
     parent.append(this.element);
@@ -72,10 +75,12 @@ export class FireplaceRenderer {
     this.flameGrain = colors.map(() => add('.fire-flame-grain','path',{fill:'url(#fire-hatch)'}));
     this.lowerFlames = Array.from({length:4},(_,n)=>add('.fire-lower-flames','path',{fill:n%2?'#f8bc68':'#df793d',stroke:'#eb994e','stroke-width':1.8}));
     this.embers = Array.from({length:16},(_,n)=>add('.fire-embers','path',{d:`M${535+(n*79%466)} ${768+(n*13%32)}l${5+n%4*2} ${n%2?-3:2}`,stroke:n%3?'#ec9850':'#f9d082','stroke-width':3+n%3}));
-    this.sparks = Array.from({length:7},()=>add('.fire-sparks','path',{stroke:'#e99654','stroke-width':2.5}));
+    this.sparks = Array.from({length:16},(_,n)=>add('.fire-sparks','path',{
+      stroke:['#ffc56d','#f9aa55','#ffdc91'][n%3],'stroke-width':6+n%3*.5
+    }));
     this.glow = this.element.querySelector('.fire-glow');
     this.logRim = this.element.querySelector('.fire-log-rim');
-    this.time=0;this.last=null;this.visible=false;
+    this.time=0;this.sparkTime=0;this.last=null;this.visible=false;
     this.update(0,0,true);
   }
 
@@ -89,6 +94,7 @@ export class FireplaceRenderer {
     const i=clampFire(intensity),p=fireParameters(i);
     const delta=this.last===null?0:Math.max(0,Math.min(.06,now-this.last));
     this.last=now;this.time+=delta*p.flameMovement*(slow?.23:1);
+    this.sparkTime+=delta*(slow?.23:1);
     const t=this.time,x=[769,673,871,747,846,787,757];
     this.flames.forEach((node,n)=>{
       const presence=n===0?1:smoothFire((i-(n-1)*.085)/.24);
@@ -109,11 +115,20 @@ export class FireplaceRenderer {
     this.logRim.setAttribute('opacity',.1+i*.35);
     this.embers.forEach((node,n)=>node.setAttribute('opacity',p.emberGlow*(.75+.25*Math.sin(t*(.9+n*.03)+n*2)**2)));
     this.sparks.forEach((node,n)=>{
-      const phase=(t*(.09+n*.004)+n*.618034)%1;
-      const presence=smoothFire((i-.2-n*.075)/.3),progress=phase/Math.max(.001,p.sparkFrequency);
-      const x=632+n*43+Math.sin(t*.6+n)*8,y=735-Math.min(1,progress)*(140+i*275);
-      node.setAttribute('d',`M${x} ${y}l${Math.sin(n+t)*2} -6`);
-      node.setAttribute('opacity',progress<1?Math.sin(progress*Math.PI)*presence*.65:0);
+      // Broad, overlapping lifetimes prevent empty medium-intensity frames.
+      // Fixed per-particle seeds keep position, speed and pencil marks stable.
+      const seed=(n*.618034)%1,phase=(this.sparkTime*(.055+i*.055)*(.82+seed*.48)+.11+seed)%1;
+      const progress=phase/p.sparkDuty,presence=smoothFire(p.sparkCount-n);
+      const rise=Math.min(1,progress),originX=622+(n*97%309),originY=739+n%3*9;
+      const travel=(230+seed*330)*(.7+i*.65);
+      const drift=(Math.sin(rise*3+n*1.7)-Math.sin(n*1.7))*(9+seed*14)+rise*(seed-.5)*22;
+      const x=originX+drift,y=originY-rise*travel,size=10+n%4*2;
+      const envelope=smoothFire(progress/.1)*smoothFire((1-progress)/.2);
+      const d=n%3===0?`M${x} ${y}l1 -${size*.4}`
+        :n%3===1?`M${x-1} ${y+size*.3}q${2+seed*2} -${size*.45} 1 -${size}`
+        :`M${x} ${y}l-2 -${size*.42} 3 -${size*.58} 1 ${size*.53}Z`;
+      node.setAttribute('d',d);
+      node.setAttribute('opacity',presence*envelope*(.82+seed*.14)*(.55+.45*smoothFire(i/.32)));
     });
     this.parameters=p;
   }
