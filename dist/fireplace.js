@@ -42,18 +42,22 @@ function drawFirelight(add) {
 export function fireParameters(intensity) {
   const i = clampFire(intensity);
   return {
-    flameHeight: 14 + 400 * Math.pow(i, .78),
-    flameWidthVariation: 2 + i * 13,
-    flameMovement: .2 + i * .48,
+    flameHeight: 12 + 426 * Math.pow(i, .8),
+    flameWidthVariation: 2 + i * 16,
+    flameMovement: .17 + .66 * Math.pow(i, .85),
     flameCount: 1 + i * 6,
-    emberGlow: .2 + i * .45,
+    emberGlow: .14 + i * .61,
     sparkCount: i <= .15 ? .65 + .35 * smoothFire(i / .15)
       : i <= .42 ? 1 + 4 * smoothFire((i - .15) / .27)
-      : 5 + 7 * smoothFire((i - .42) / .58),
-    sparkDuty: .16 + .84 * smoothFire(i / .32),
-    lightSpread: .72 + .38 * smoothFire(Math.sqrt(i)),
-    lightOpacity: .2 + .5 * smoothFire(Math.sqrt(i)),
-    hearthLight: .2 + .48 * smoothFire(i)
+      : 5 + 8 * smoothFire((i - .42) / .58),
+    sparkDuty: .11 + .89 * smoothFire(i / .32),
+    // Keep the approved middle warmth; reserve more spread/strength for the top
+    // half of the slider instead of reaching almost full warmth at mid intensity.
+    lightSpread: .62 + .6 * Math.pow(i, .65),
+    lightOpacity: .12 + .72 * Math.pow(i, .65),
+    hearthLight: .09 + .8 * Math.pow(i, .72),
+    hearthSpreadX: .74 + i * .43,
+    hearthSpreadY: .58 + i * .77
   };
 }
 
@@ -156,41 +160,42 @@ export class FireplaceRenderer {
     const lightBreath=.985+.015*Math.sin(t*.43);
     this.lightField.setAttribute('transform',`translate(768 690) scale(${p.lightSpread}) translate(-768 -690)`);
     this.lightField.setAttribute('opacity',p.lightOpacity*lightBreath);
-    this.hearthLight.setAttribute('transform',`translate(768 905) scale(${.83+i*.23} ${.7+i*.4}) translate(-768 -905)`);
+    this.hearthLight.setAttribute('transform',`translate(768 905) scale(${p.hearthSpreadX} ${p.hearthSpreadY}) translate(-768 -905)`);
     this.hearthLight.setAttribute('opacity',p.hearthLight*lightBreath);
     this.flames.forEach((node,n)=>{
       const presence=n===0?1:smoothFire((i-(n-1)*.085)/.24);
       const sway=Math.sin(t*(1.1+n*.11)+n*2.7)*p.flameWidthVariation;
-      const pulse=1+.045*Math.sin(t*(1.8+n*.13)+n)+.02*Math.sin(t*.71+n);
+      const pulse=1+(.025+i*.045)*Math.sin(t*(1.8+n*.13)+n)+(.012+i*.01)*Math.sin(t*.71+n);
       const h=p.flameHeight*[1,.61,.72,.81,.49,.59,.35][n]*pulse;
-      const w=10+i*[68,43,49,43,37,37,24][n],b=752-n%3*5,tip=x[n]+sway;
+      const w=(10+i*[68,43,49,43,37,37,24][n])*(1+.08*i),b=752-n%3*5,tip=x[n]+sway;
       const d=`M${x[n]-w} ${b}C${x[n]-w*1.35} ${b-h*.13} ${x[n]-w*.82} ${b-h*.34} ${x[n]-w*.55} ${b-h*.45}Q${x[n]-w*.48} ${b-h*.29} ${x[n]-w*.19} ${b-h*.35}C${tip+w*.13} ${b-h*.57} ${tip+w*.33} ${b-h*.83} ${tip} ${b-h}Q${tip+w*.8} ${b-h*.83} ${x[n]+w*.53} ${b-h*.53}Q${x[n]+w*.72} ${b-h*.62} ${x[n]+w*.87} ${b-h*.69}C${x[n]+w*.62} ${b-h*.4} ${x[n]+w*1.38} ${b-h*.16} ${x[n]+w*.82} ${b}Q${x[n]} ${b+13} ${x[n]-w} ${b}Z`;
       node.setAttribute('d',d);node.setAttribute('opacity',presence*.94);
       this.flameGrain[n].setAttribute('d',d);this.flameGrain[n].setAttribute('opacity',presence*.7);
     });
     this.lowerFlames.forEach((node,n)=>{
-      const x=588+n*116,b=782-(n%2)*13,h=(9+i*68)*(1+.09*Math.sin(t*1.8+n)),w=7+i*15;
+      const x=588+n*116,b=782-(n%2)*13,h=(9+i*78)*(1+.09*Math.sin(t*1.8+n)),w=7+i*16;
       node.setAttribute('d',`M${x-w} ${b}Q${x-w*1.5} ${b-h*.4} ${x} ${b-h}Q${x+w*.2} ${b-h*.38} ${x+w} ${b-h*.5}Q${x+w*1.8} ${b} ${x-w} ${b}Z`);
       node.setAttribute('opacity',(.38+i*.45)*(n%2?.8:1));
     });
     this.glow.setAttribute('opacity',p.emberGlow*(.95+.05*Math.sin(t*.7)));
-    this.logRim.setAttribute('opacity',.1+i*.35);
+    this.logRim.setAttribute('opacity',.08+i*.41);
     this.embers.forEach((node,n)=>node.setAttribute('opacity',p.emberGlow*(.75+.25*Math.sin(t*(.9+n*.03)+n*2)**2)));
     this.sparks.forEach((node,n)=>{
       // Broad, overlapping lifetimes prevent empty medium-intensity frames.
       // Fixed per-particle seeds keep position, speed and pencil marks stable.
-      const seed=(n*.618034)%1,phase=(this.sparkTime*(.055+i*.055)*(.82+seed*.48)+.11+seed)%1;
+      const seed=(n*.618034)%1,phase=(this.sparkTime*(.045+i*.075)*(.82+seed*.48)+.11+seed)%1;
       const progress=phase/p.sparkDuty,presence=smoothFire(p.sparkCount-n);
       const rise=Math.min(1,progress),originX=622+(n*97%309),originY=739+n%3*9;
       const travel=(230+seed*330)*(.7+i*.65);
       const drift=(Math.sin(rise*3+n*1.7)-Math.sin(n*1.7))*(9+seed*14)+rise*(seed-.5)*22;
-      const x=originX+drift,y=originY-rise*travel,size=10+n%4*2;
+      const x=originX+drift,y=originY-rise*travel,size=(10+n%4*2)*(.75+.45*i);
       const envelope=smoothFire(progress/.1)*smoothFire((1-progress)/.2);
       const d=n%3===0?`M${x} ${y}l1 -${size*.4}`
         :n%3===1?`M${x-1} ${y+size*.3}q${2+seed*2} -${size*.45} 1 -${size}`
         :`M${x} ${y}l-2 -${size*.42} 3 -${size*.58} 1 ${size*.53}Z`;
       node.setAttribute('d',d);
-      node.setAttribute('opacity',presence*envelope*(.82+seed*.14)*(.55+.45*smoothFire(i/.32)));
+      node.setAttribute('stroke-width',(6+n%3*.5)*(.8+.35*i));
+      node.setAttribute('opacity',presence*envelope*(.82+seed*.14)*(.42+.58*smoothFire(i/.5)));
     });
     this.parameters=p;
   }

@@ -4,13 +4,14 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {resolve,extname} from 'node:path';
 import assert from 'node:assert/strict';
+import {fireParameters} from '../dist/fireplace.js';
 
-const baseline='43dd22fdbcb7eb2e902e4a83ef56b459e8c89e22';
+const baseline='fcbb695ba74586759d529ab656ebb20a9a53b456';
 const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{encoding:'utf8'});
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
 // No behavior or audio code is changed; only the Fireplace module cache key.
-assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-7'),oldApp);
+assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-8'),oldApp);
 assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
@@ -18,12 +19,26 @@ assert.equal(readFileSync('dist/world-art.js','utf8'),previous('world-art.js'));
 const oldFire=previous('fireplace.js'),fire=readFileSync('dist/fireplace.js','utf8');
 const mix=source=>source.slice(source.indexOf('export function fireMix'),source.indexOf('export class FireplaceRenderer')).trim();
 assert.equal(mix(fire),mix(oldFire));
+const pigment=source=>source.slice(source.indexOf('function drawFirelight'),source.indexOf('export function fireParameters'));
+assert.equal(pigment(fire),pigment(oldFire),'approved environment marks are not redrawn; no extra objects');
+const {fireParameters:oldParameters}=await import('data:text/javascript;base64,'+Buffer.from(oldFire).toString('base64'));
+const responseKeys=['flameHeight','flameWidthVariation','flameMovement','emberGlow','sparkCount','sparkDuty','lightSpread','lightOpacity','hearthLight','hearthSpreadX','hearthSpreadY'];
+for(let step=0;step<=100;step++){
+  const p=fireParameters(step/100),previous=fireParameters((step-1)/100);
+  for(const key of responseKeys)assert.ok(Number.isFinite(p[key])&&p[key]>=previous[key],`${key}: finite continuous monotonic response`);
+}
+assert.deepEqual(fireParameters(-1),fireParameters(0));assert.deepEqual(fireParameters(2),fireParameters(1));
+const currentHigh=fireParameters(1),oldHigh=oldParameters(1);
+assert.ok(currentHigh.lightSpread>oldHigh.lightSpread&&currentHigh.lightSpread/oldHigh.lightSpread<1.15);
+assert.ok(currentHigh.lightOpacity>oldHigh.lightOpacity&&currentHigh.lightOpacity<=.85);
+assert.ok(currentHigh.flameHeight/oldHigh.flameHeight<1.1&&currentHigh.flameMovement>oldHigh.flameMovement);
 
 const dir=resolve('dist'),mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.wav':'audio/wav','.mp3':'audio/mpeg'};
 const server=createServer((req,res)=>{try{const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname),file=resolve(dir,'.'+(name==='/'?'/index.html':name));if(!file.startsWith(dir+'/'))throw Error('Invalid path');res.setHeader('Content-Type',mime[extname(file)]||'application/octet-stream');res.end(readFileSync(file));}catch{res.writeHead(404);res.end();}});
 await new Promise(done=>server.listen(0,'127.0.0.1',done));
 const url=`http://127.0.0.1:${server.address().port}/`;
 mkdirSync('test-results',{recursive:true});
+writeFileSync('test-results/intensity-response.json',JSON.stringify([0,.15,.42,.7,1].map(intensity=>({intensity,before:oldParameters(intensity),after:fireParameters(intensity)})),null,2));
 const browser=await chromium.launch({headless:true});
 const measurements=[];
 const selectors=['.app','.top-bar','.world','#scene-canvas','.title-lockup h1','.scene-mark','.scene-mark svg','.timer-button','.timer-button svg','.intensity-area','.intensity-copy','.range-wrap','.controls','.play-button','.controls .icon-button'];
@@ -33,7 +48,7 @@ const makePage=async(viewport,old=false)=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   // Freeze only the test animation clock, then render each scene at a known time.
   await page.addInitScript(()=>{window.requestAnimationFrame=()=>1;window.cancelAnimationFrame=()=>{};});
-  await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:(old?oldApp:app)+'\nwindow.__sceneQA={renderer,setScene};'}));
+  await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:(old?oldApp:app)+'\nwindow.__sceneQA={renderer,setScene,slider,intensityText,pause};'}));
   if(old)await page.route('**/styles.css*',r=>r.fulfill({contentType:'text/css',body:oldCss}));
   if(old)await page.route('**/fireplace.js*',r=>r.fulfill({contentType:'text/javascript',body:oldFire}));
   await page.goto(url);await page.waitForFunction(()=>window.__sceneQA);
@@ -99,9 +114,9 @@ try {
     const atmosphere=[];
     for(const intensity of [0,.42,1]){
       const state=await current.page.evaluate(i=>{
-        const f=window.__sceneQA.renderer.fireplace;f.last=null;f.update(0,i);
+        const q=window.__sceneQA,f=q.renderer.fireplace;q.renderer.scene.setIntensity(i);q.slider.set(i);document.querySelector('#intensity-description').textContent=q.intensityText(q.renderer.scene,i);f.last=null;f.update(0,i);
         const box=f.lightField.getBoundingClientRect(),hearth=f.hearthLight.getBoundingClientRect();
-        return {intensity:i,opacity:Number(f.lightField.getAttribute('opacity')),width:box.width,height:box.height,hearthOpacity:Number(f.hearthLight.getAttribute('opacity')),hearthBottom:hearth.bottom,paths:f.lightField.querySelectorAll('path').length,background:getComputedStyle(document.querySelector('.app')).backgroundColor};
+        return {intensity:i,opacity:Number(f.lightField.getAttribute('opacity')),width:box.width,height:box.height,hearthOpacity:Number(f.hearthLight.getAttribute('opacity')),hearthBottom:hearth.bottom,paths:f.lightField.querySelectorAll('path').length,background:getComputedStyle(document.querySelector('.app')).backgroundColor,parameters:{...f.parameters}};
       },intensity);
       atmosphere.push(state);
       assert.equal(state.background,'rgb(251, 251, 252)');
@@ -113,13 +128,18 @@ try {
       assert.ok(atmosphere[n].opacity>atmosphere[n-1].opacity&&atmosphere[n].width>atmosphere[n-1].width,'firelight expands and strengthens continuously');
       assert.ok(atmosphere[n].hearthOpacity>atmosphere[n-1].hearthOpacity,'reflected hearth warmth follows intensity');
     }
-    // Removing the atmosphere must restore the exact approved Fireplace pixels:
-    // no changes to the source illustration, live flames, logs, sparks or UI.
-    await current.page.locator('.fire-environment').evaluate(e=>e.style.display='none');
+    assert.ok(atmosphere[2].width/atmosphere[0].width>1.9,'clearly wider light spread from embers to roaring');
+    assert.ok(atmosphere[0].opacity<.13&&atmosphere[2].opacity>.8&&atmosphere[2].opacity<=.85,'faint low end, bounded stronger high end');
+    assert.ok(atmosphere[1].opacity>.45&&atmosphere[1].opacity<.6,'approved medium warmth remains restrained');
+    assert.ok(atmosphere[2].parameters.flameHeight<=440,'fuller fire stays inside the original opening');
+    // Hide only the live response layers in BOTH versions. Static masonry,
+    // rear/front logs, hearth artwork and all layout must remain pixel-identical.
+    const liveLayers='.fire-environment,.fire-live-interior,.fire-log-rim,.fire-embers,.fire-sparks';
+    for(const page of [old.page,current.page])await page.locator(liveLayers).evaluateAll(nodes=>nodes.forEach(e=>e.style.display='none'));
     for(const page of [old.page,current.page])await page.evaluate(()=>{const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,.42);});
     const oldScene=await old.page.locator('.world').screenshot(),withoutAtmosphere=await current.page.locator('.world').screenshot();
-    assert.ok(oldScene.equals(withoutAtmosphere),`${key}: atmosphere-only change; underlying fireplace must be pixel-identical`);
-    await current.page.locator('.fire-environment').evaluate(e=>e.style.display='');
+    assert.ok(oldScene.equals(withoutAtmosphere),`${key}: static fireplace artwork and layout must be pixel-identical`);
+    for(const page of [old.page,current.page])await page.locator(liveLayers).evaluateAll(nodes=>nodes.forEach(e=>e.style.display=''));
     if(viewport.width===390){
       const sparkStats=await current.page.evaluate(()=>{
         const fire=window.__sceneQA.renderer.fireplace,stats=[];
@@ -142,7 +162,7 @@ try {
         assert.ok(stat.distinctPositions>1000&&stat.shapes>=3,'independent moving pencil marks');
         if(stat.intensity<=.15){assert.equal(stat.min,0);assert.equal(stat.max,1);}
         else if(stat.intensity===.42){assert.ok(stat.min>=3&&stat.max<=5);}
-        else {assert.ok(stat.min>=7&&stat.max<=12);}
+        else {assert.ok(stat.min>=7&&stat.max<=13);}
       }
       writeFileSync('test-results/spark-measurements.json',JSON.stringify(sparkStats,null,2));
       console.log('PASS staggered spark density over 180 simulated seconds:',JSON.stringify(sparkStats));
@@ -164,10 +184,23 @@ try {
       if(viewport.width===390)await current.page.screenshot({path:`test-results/fire-${intensity}.png`});
     }
     assert.notEqual(captures[0],captures[1]);
+    if(viewport.width===390){
+      // Exercise the actual input, not just renderer.update(), through a drag.
+      const range=await current.page.locator('#intensity-slider').boundingBox(),samples=[];
+      await current.page.mouse.move(range.x+2,range.y+range.height/2);await current.page.mouse.down();
+      for(const fraction of [0,.25,.5,.75,1]){
+        await current.page.mouse.move(range.x+2+(range.width-4)*fraction,range.y+range.height/2,{steps:8});
+        samples.push(await current.page.evaluate(()=>{const r=window.__sceneQA.renderer;r.fireplace.last=null;r.fireplace.update(0,r.scene.intensity);return {intensity:r.scene.intensity,...r.fireplace.parameters};}));
+      }
+      await current.page.mouse.up();await current.page.evaluate(()=>window.__sceneQA.pause());
+      assert.ok(samples[0].intensity<.02&&samples.at(-1).intensity>.98,'slider drag spans Embers to Roaring Fire');
+      for(let n=1;n<samples.length;n++)assert.ok(samples[n].lightSpread>samples[n-1].lightSpread&&samples[n].hearthLight>samples[n-1].hearthLight&&samples[n].flameMovement>samples[n-1].flameMovement,'drag visibly changes the whole environment');
+      writeFileSync('test-results/slider-drag.json',JSON.stringify(samples,null,2));
+    }
     await current.page.locator('#scene-trigger').click();await current.page.locator('[data-world="rain"]').click();
     assert.deepEqual(await measure(current.page),rain,`${key}: round-trip switch has no layout shift`);
     assert.deepEqual(current.errors,[]);assert.deepEqual(old.errors,[]);
-    measurements.push({viewport,layoutMatches:true,rainCanvasPixelsUnchanged:true,underlyingFireplacePixelsUnchanged:true,atmosphere,pixelDiff,...geometry});
+    measurements.push({viewport,layoutMatches:true,rainCanvasPixelsUnchanged:true,staticFireplacePixelsUnchanged:true,atmosphere,pixelDiff,...geometry});
     console.log(`PASS ${key}: Rain canvas pixel-identical; shared scene/header/slider/control geometry; calm live 0/50/100 fire; no overflow or JS errors. Subject ${(geometry.subjectWidthRatio*100).toFixed(1)}% scene width / ${(geometry.subjectHeightRatio*100).toFixed(1)}% height. UI edge differences: ${JSON.stringify(pixelDiff)}`);
     await old.page.close();await current.page.close();
   }
@@ -180,4 +213,7 @@ try {
   const comparison=await browser.newPage({viewport:{width:800,height:900},deviceScaleFactor:1});
   await comparison.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>`+['fireplace-before-atmosphere','390x844-fireplace'].map((name,n)=>`<figure><figcaption>${n?'Local pencil firelight · default intensity':'Before · same fireplace and size'}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/'+name+'.png').toString('base64')}"/></figure>`).join(''));
   await comparison.screenshot({path:'test-results/firelight-before-after.png'});await comparison.close();
+  const intensityReport=await browser.newPage({viewport:{width:1210,height:900},deviceScaleFactor:1});
+  await intensityReport.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>`+[0,.42,1].map((i,n)=>`<figure><figcaption>${['Embers · 0%','Gentle fire · 42%','Roaring fire · 100%'][n]}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/atmosphere-'+i+'.png').toString('base64')}"/></figure>`).join(''));
+  await intensityReport.screenshot({path:'test-results/intensity-comparison.png'});await intensityReport.close();
 } finally {await browser.close();await new Promise(done=>server.close(done));}
