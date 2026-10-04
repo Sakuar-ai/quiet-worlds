@@ -16,6 +16,6 @@ const app=readFileSync('dist/app.js','utf8');
 for(const [,path] of app.matchAll(/url: "\.\/([^"]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing audio: ${path}`);
 const fire=readFileSync('dist/fireplace.js','utf8');
 for(const [,path] of fire.matchAll(/href="\.\/([^"?#]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing fireplace asset: ${path}`);
-for(const layer of ['fire-structure','fire-glow','fire-lower-flames','fire-flames','fire-logs','fire-embers','fire-sparks']) assert.ok(fire.includes(layer),`Missing independent layer: ${layer}`);
+for(const layer of ['fire-environment','firelight-field','firelight-hearth','fire-structure','fire-glow','fire-lower-flames','fire-flames','fire-logs','fire-embers','fire-sparks']) assert.ok(fire.includes(layer),`Missing independent layer: ${layer}`);
 assert.ok(!readFileSync('dist/styles.css','utf8').includes('53svh'),'No Fireplace-only scene height');
 console.log('Static build passed: module syntax, entry/audio/art assets, aligned static artwork and independent live fire layers. Deployment directory: dist/');

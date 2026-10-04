@@ -2,6 +2,43 @@
 const clampFire = n => Math.max(0, Math.min(1, n));
 const smoothFire = n => { const p = clampFire(n); return p * p * (3 - 2 * p); };
 
+// Seeded pigment is drawn once. Only the enclosing light field changes with
+// intensity: no new image, frame sequence, full-page tint or moving texture.
+function drawFirelight(add) {
+  let seed=7419;
+  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+  const f=n=>n.toFixed(2);
+  for(let layer=0;layer<12;layer++){
+    const spread=1-layer*.037,points=[];
+    for(let n=0;n<28;n++){
+      const angle=n/28*Math.PI*2,edge=1+.05*Math.sin(angle*3+layer*.28)+.035*Math.sin(angle*7+1);
+      points.push([750+Math.cos(angle)*850*spread*edge,430+Math.sin(angle)*930*spread*edge]);
+    }
+    const middle=(a,b)=>`${f((a[0]+b[0])/2)} ${f((a[1]+b[1])/2)}`;
+    let d=`M${middle(points.at(-1),points[0])}`;
+    points.forEach((p,n)=>d+=`Q${f(p[0])} ${f(p[1])} ${middle(p,points[(n+1)%points.length])}`);
+    add('.firelight-haze','path',{d:d+'Z',fill:['#edbd9a','#efc895','#eab38e'][layer%3],opacity:.045+layer*.002});
+  }
+  // Short broken diagonal marks: pressure and density thin towards the edge.
+  const strokes=Array.from({length:12},()=>[]);
+  for(let n=0;n<1500;n++){
+    const x=-140+random()*1820,y=-540+random()*1960;
+    const radius=Math.hypot((x-750)/875,(y-440)/955);
+    const falloff=Math.max(0,1-radius*radius);
+    if(random()>falloff*.85)continue;
+    const length=13+random()*49,tilt=.5+random()*.8;
+    const pressure=Math.min(3,Math.floor(falloff*4)),color=n%3;
+    strokes[color*4+pressure].push(`M${f(x)} ${f(y)}q${f(length*.38)} ${f(-length*tilt*.6)} ${f(length)} ${f(-length*tilt)}`);
+  }
+  strokes.forEach((paths,n)=>add('.firelight-pencil','path',{d:paths.join(''),fill:'none',stroke:['#d99b78','#e6b082','#edc291'][Math.floor(n/4)],'stroke-width':3+n%3,opacity:.09+(n%4)*.055,'stroke-linecap':'round','stroke-dasharray':n%2?'9 3 14 2':'17 2 8 4'}));
+  // Loose reflected warmth, not a room floor or a horizontal boundary.
+  for(let n=0;n<30;n++){
+    const x=80+random()*1050,y=886+random()*270,length=80+random()*330;
+    const pressure=Math.max(.08,1-(y-886)/300);
+    add('.firelight-hearth','path',{d:`M${f(x)} ${f(y)}q${f(length*.5)} ${f(random()*17-8)} ${f(length)} ${f(random()*11-5)}`,fill:'none',stroke:n%3?'#dda478':'#ecc08f','stroke-width':2+random()*5,opacity:pressure*.25,'stroke-linecap':'round','stroke-dasharray':`${f(16+random()*23)} ${f(6+random()*9)}`});
+  }
+}
+
 export function fireParameters(intensity) {
   const i = clampFire(intensity);
   return {
@@ -13,7 +50,10 @@ export function fireParameters(intensity) {
     sparkCount: i <= .15 ? .65 + .35 * smoothFire(i / .15)
       : i <= .42 ? 1 + 4 * smoothFire((i - .15) / .27)
       : 5 + 7 * smoothFire((i - .42) / .58),
-    sparkDuty: .16 + .84 * smoothFire(i / .32)
+    sparkDuty: .16 + .84 * smoothFire(i / .32),
+    lightSpread: .72 + .38 * smoothFire(Math.sqrt(i)),
+    lightOpacity: .2 + .5 * smoothFire(Math.sqrt(i)),
+    hearthLight: .2 + .48 * smoothFire(i)
   };
 }
 
@@ -34,6 +74,16 @@ export class FireplaceRenderer {
     // x=136..1414, so 84% * 1278/1536 = 69.9% of Rain's usable scene width.
     // A nested SVG preserves the artwork's aspect ratio without a new canvas layout.
     this.element.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Colored-pencil arched brick fireplace with fire emerging between stacked logs">
+      <svg class="fire-environment" x="8%" y="0" width="84%" height="100%" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid meet" overflow="visible">
+        <defs>
+          <filter id="firelight-soft-edge" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="14"/></filter>
+        </defs>
+        <g class="firelight-field">
+          <g class="firelight-haze" filter="url(#firelight-soft-edge)"></g>
+          <g class="firelight-pencil"></g>
+        </g>
+        <g class="firelight-hearth"></g>
+      </svg>
       <svg class="fire-illustration" x="8%" y="0" width="84%" height="100%" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid meet">
         <defs>
           <image id="fire-pencil-art" href="./art/fireplace-reference-v6.png" width="1536" height="1024"/>
@@ -70,6 +120,9 @@ export class FireplaceRenderer {
       this.element.querySelector(group).append(node);
       return node;
     };
+    drawFirelight(add);
+    this.lightField=this.element.querySelector('.firelight-field');
+    this.hearthLight=this.element.querySelector('.firelight-hearth');
     const colors = ['#d95f35','#e78342','#e96d38','#f1a54f','#ee9145','#ffd47e','#fff0b9'];
     this.flames = colors.map((color,n) => add('.fire-flames','path',{fill:color,stroke:n<3?'#df7142':'#f6c46d','stroke-width':2.5}));
     this.flameGrain = colors.map(() => add('.fire-flame-grain','path',{fill:'url(#fire-hatch)'}));
@@ -96,6 +149,12 @@ export class FireplaceRenderer {
     this.last=now;this.time+=delta*p.flameMovement*(slow?.23:1);
     this.sparkTime+=delta*(slow?.23:1);
     const t=this.time,x=[769,673,871,747,846,787,757];
+    // A slow, almost imperceptible breath of warmth. The masonry never scales.
+    const lightBreath=.985+.015*Math.sin(t*.43);
+    this.lightField.setAttribute('transform',`translate(768 690) scale(${p.lightSpread}) translate(-768 -690)`);
+    this.lightField.setAttribute('opacity',p.lightOpacity*lightBreath);
+    this.hearthLight.setAttribute('transform',`translate(768 905) scale(${.83+i*.23} ${.7+i*.4}) translate(-768 -905)`);
+    this.hearthLight.setAttribute('opacity',p.hearthLight*lightBreath);
     this.flames.forEach((node,n)=>{
       const presence=n===0?1:smoothFire((i-(n-1)*.085)/.24);
       const sway=Math.sin(t*(1.1+n*.11)+n*2.7)*p.flameWidthVariation;

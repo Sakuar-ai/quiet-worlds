@@ -5,12 +5,12 @@ import {execFileSync} from 'node:child_process';
 import {resolve,extname} from 'node:path';
 import assert from 'node:assert/strict';
 
-const baseline='a7d7d68ca07779fe84978f5d0f346b1058f090f9';
+const baseline='43dd22fdbcb7eb2e902e4a83ef56b459e8c89e22';
 const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{encoding:'utf8'});
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
 // No behavior or audio code is changed; only the Fireplace module cache key.
-assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-6'),oldApp);
+assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-7'),oldApp);
 assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
@@ -35,6 +35,7 @@ const makePage=async(viewport,old=false)=>{
   await page.addInitScript(()=>{window.requestAnimationFrame=()=>1;window.cancelAnimationFrame=()=>{};});
   await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:(old?oldApp:app)+'\nwindow.__sceneQA={renderer,setScene};'}));
   if(old)await page.route('**/styles.css*',r=>r.fulfill({contentType:'text/css',body:oldCss}));
+  if(old)await page.route('**/fireplace.js*',r=>r.fulfill({contentType:'text/javascript',body:oldFire}));
   await page.goto(url);await page.waitForFunction(()=>window.__sceneQA);
   await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important}'});
   // Let the initial ResizeObserver and fonts settle before drawing the frozen frame.
@@ -88,6 +89,37 @@ try {
     assert.ok(geometry.subject.y+geometry.subject.height<rain['.intensity-area'].y,`${key}: hearth must not overlap slider`);
     assert.equal(geometry.paper,'rgb(251, 251, 252)');assert.equal(geometry.overflow,false);
     await current.page.screenshot({path:`test-results/${key}-fireplace.png`});
+    // The environment is an independent underlay, never a resized fireplace.
+    await old.page.locator('#scene-trigger').click();await old.page.locator('[data-world="fireplace"]').click();
+    await old.page.evaluate(()=>{const r=window.__sceneQA.renderer;r.transition=null;r.render(r.start+3000);});
+    await old.page.evaluate(async()=>{const image=new Image();image.src='./art/fireplace-reference-v6.png';await image.decode();});
+    const masonry=page=>page.locator('.fire-masonry-bounds').boundingBox();
+    assert.deepEqual(await masonry(current.page),await masonry(old.page),`${key}: approved fireplace size and placement unchanged`);
+    if(viewport.width===390)await old.page.screenshot({path:'test-results/fireplace-before-atmosphere.png'});
+    const atmosphere=[];
+    for(const intensity of [0,.42,1]){
+      const state=await current.page.evaluate(i=>{
+        const f=window.__sceneQA.renderer.fireplace;f.last=null;f.update(0,i);
+        const box=f.lightField.getBoundingClientRect(),hearth=f.hearthLight.getBoundingClientRect();
+        return {intensity:i,opacity:Number(f.lightField.getAttribute('opacity')),width:box.width,height:box.height,hearthOpacity:Number(f.hearthLight.getAttribute('opacity')),hearthBottom:hearth.bottom,paths:f.lightField.querySelectorAll('path').length,background:getComputedStyle(document.querySelector('.app')).backgroundColor};
+      },intensity);
+      atmosphere.push(state);
+      assert.equal(state.background,'rgb(251, 251, 252)');
+      assert.ok(state.paths>=20,'layered pencil pigment, not a single digital spotlight');
+      assert.ok(state.hearthBottom<rain['.intensity-area'].y,'local hearth warmth never reaches the controls');
+      if(viewport.width===390)await current.page.screenshot({path:`test-results/atmosphere-${intensity}.png`});
+    }
+    for(let n=1;n<atmosphere.length;n++){
+      assert.ok(atmosphere[n].opacity>atmosphere[n-1].opacity&&atmosphere[n].width>atmosphere[n-1].width,'firelight expands and strengthens continuously');
+      assert.ok(atmosphere[n].hearthOpacity>atmosphere[n-1].hearthOpacity,'reflected hearth warmth follows intensity');
+    }
+    // Removing the atmosphere must restore the exact approved Fireplace pixels:
+    // no changes to the source illustration, live flames, logs, sparks or UI.
+    await current.page.locator('.fire-environment').evaluate(e=>e.style.display='none');
+    for(const page of [old.page,current.page])await page.evaluate(()=>{const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,.42);});
+    const oldScene=await old.page.locator('.world').screenshot(),withoutAtmosphere=await current.page.locator('.world').screenshot();
+    assert.ok(oldScene.equals(withoutAtmosphere),`${key}: atmosphere-only change; underlying fireplace must be pixel-identical`);
+    await current.page.locator('.fire-environment').evaluate(e=>e.style.display='');
     if(viewport.width===390){
       const sparkStats=await current.page.evaluate(()=>{
         const fire=window.__sceneQA.renderer.fireplace,stats=[];
@@ -135,7 +167,7 @@ try {
     await current.page.locator('#scene-trigger').click();await current.page.locator('[data-world="rain"]').click();
     assert.deepEqual(await measure(current.page),rain,`${key}: round-trip switch has no layout shift`);
     assert.deepEqual(current.errors,[]);assert.deepEqual(old.errors,[]);
-    measurements.push({viewport,layoutMatches:true,rainCanvasPixelsUnchanged:true,pixelDiff,...geometry});
+    measurements.push({viewport,layoutMatches:true,rainCanvasPixelsUnchanged:true,underlyingFireplacePixelsUnchanged:true,atmosphere,pixelDiff,...geometry});
     console.log(`PASS ${key}: Rain canvas pixel-identical; shared scene/header/slider/control geometry; calm live 0/50/100 fire; no overflow or JS errors. Subject ${(geometry.subjectWidthRatio*100).toFixed(1)}% scene width / ${(geometry.subjectHeightRatio*100).toFixed(1)}% height. UI edge differences: ${JSON.stringify(pixelDiff)}`);
     await old.page.close();await current.page.close();
   }
@@ -145,4 +177,7 @@ try {
   const images=['390x844-rain','390x844-fireplace'].map(name=>`<figure><figcaption>${name.endsWith('rain')?'Approved Rain':'Same artwork · 69.9% masonry width'}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/'+name+'.png').toString('base64')}"/></figure>`).join('');
   await report.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>${images}`);
   await report.screenshot({path:'test-results/iphone-side-by-side.png'});await report.close();
+  const comparison=await browser.newPage({viewport:{width:800,height:900},deviceScaleFactor:1});
+  await comparison.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>`+['fireplace-before-atmosphere','390x844-fireplace'].map((name,n)=>`<figure><figcaption>${n?'Local pencil firelight · default intensity':'Before · same fireplace and size'}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/'+name+'.png').toString('base64')}"/></figure>`).join(''));
+  await comparison.screenshot({path:'test-results/firelight-before-after.png'});await comparison.close();
 } finally {await browser.close();await new Promise(done=>server.close(done));}
