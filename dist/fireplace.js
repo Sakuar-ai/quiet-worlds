@@ -112,10 +112,10 @@ export class FireplaceRenderer {
         <rect class="fire-masonry-bounds" x="136" y="84" width="1278" height="858" fill="none" pointer-events="none"/>
         <g class="fire-live-interior" clip-path="url(#fire-cavity)">
           <g class="fire-glow" filter="url(#fire-pencil)">
-            <path d="M510 778Q551 747 626 749Q685 732 748 750Q827 730 898 747Q1002 741 1065 779L1035 790 998 787 956 799 913 791 868 801 817 793 778 802 734 792 683 799 646 788 598 795 555 785Z" fill="#bd512e" opacity=".9"/>
-            <path d="M553 779Q647 745 733 768Q817 744 1009 778L972 787 930 780 881 791 831 781 784 794 729 780 683 790 631 779 584 787Z" fill="#e78b43" opacity=".78"/>
-            <path d="M563 780Q647 765 715 770Q849 748 1001 781Q837 798 563 780Z" fill="url(#ember-hatch)"/>
-            <path d="M635 707Q687 681 718 704L751 735 727 771 695 753 673 766 651 744Z M791 698Q849 680 913 706L900 751 863 769 833 744 806 755Z" fill="#d66b32" opacity=".5"/>
+            <path d="M542 776Q558 754 606 758L646 769 635 785 598 781 573 790Z M682 774L706 751 746 746 774 767 756 790 727 783 704 797Z M796 766Q822 742 858 755L886 778 864 791 830 783 810 790Z M935 773L953 755 989 764 1022 780 994 788 968 782 944 791Z" fill="#923e29" opacity=".82"/>
+            <path d="M561 775L588 764 617 772 604 783 579 780Z M702 771Q726 750 750 767L740 782 719 778Z M815 762L843 757 864 770 847 779 825 775Z M955 774L974 766 997 778 979 782Z" fill="#df7d3b" opacity=".78"/>
+            <path d="M574 772L600 767 617 777 587 781Z M713 769L737 759 751 771 729 780Z M826 762L845 759 858 772 833 778Z M963 774L980 770 992 779 973 781Z" fill="url(#ember-hatch)"/>
+            <path d="M645 704L681 689 710 704 724 726 697 749 675 738 664 752Z M769 712L798 692 825 704 814 736 793 747 782 732Z M851 701L886 691 905 711 893 738 871 752 858 729Z" fill="#d66b32" opacity=".5"/>
             <g class="fire-coal-bed"></g>
           </g>
           <g class="fire-root-system" mask="url(#fire-root-occlusion)">
@@ -168,7 +168,7 @@ export class FireplaceRenderer {
     }));
     this.emberFalls=Array.from({length:3},(_,n)=>add('.fire-ember-falls','path',{stroke:n%2?'#e99c50':'#f3bb68','stroke-width':3.5}));
     this.coals = Array.from({length:13},(_,n)=>{
-      const x=559+(n*73%448),y=762+(n*11%29),w=5+n%4*2;
+      const x=[570,598,620,706,726,746,813,829,852,949,969,990,734][n],y=762+(n*11%25),w=5+n%4*2;
       return add('.fire-coal-bed','path',{d:`M${x-w} ${y}l${w*.7} -4 ${w*1.1} 1 ${w*.6} 5 -${w} 3 -${w*.8} -1Z`,fill:n%3?'#e57b37':'#873923',stroke:n%3?'#f4b458':'#c9612d','stroke-width':2});
     });
     this.seamEmbers = Array.from({length:9},(_,n)=>{
@@ -202,7 +202,11 @@ export class FireplaceRenderer {
     const delta=this.last===null?0:Math.max(0,Math.min(.06,now-this.last));
     this.last=now;this.time+=delta*p.flameMovement*(slow?.23:1);
     this.sparkTime+=delta*(slow?.23:1);
-    const t=this.time,x=[769,673,871,747,846,787,757];
+    const t=this.time,x=[779,662,894,733,855,788,770];
+    // Redistribute the same flame paths, especially through the mid-range.
+    // Broader shared shoulders and staggered roots replace thin upright icons;
+    // the maximum height, surrounding firelight and fixed log pile stay intact.
+    const burning=smoothFire((i-.08)/.55);
     // A slow, almost imperceptible breath of warmth. The masonry never scales.
     const lightBreath=.985+.015*Math.sin(t*.43);
     this.lightField.setAttribute('transform',`translate(768 690) scale(${p.lightSpread}) translate(-768 -690)`);
@@ -210,26 +214,30 @@ export class FireplaceRenderer {
     this.hearthLight.setAttribute('transform',`translate(768 905) scale(${p.hearthSpreadX} ${p.hearthSpreadY}) translate(-768 -905)`);
     this.hearthLight.setAttribute('opacity',p.hearthLight*lightBreath);
     this.flames.forEach((node,n)=>{
-      const presence=n===0?1:smoothFire((i-(n-1)*.085)/.24);
+      const presence=n===0?1:smoothFire((i-(n-1)*.055)/.25);
       const sway=Math.sin(t*(1.1+n*.11)+n*2.7)*p.flameWidthVariation;
       const pulse=1+(.025+i*.045)*Math.sin(t*(1.8+n*.13)+n)+(.012+i*.01)*Math.sin(t*.71+n);
-      const h=p.flameHeight*[1,.61,.72,.81,.49,.59,.35][n]*pulse;
-      const w=(10+i*[68,43,49,43,37,37,24][n])*(1+.08*i),b=752-n%3*5,tip=x[n]+sway;
-      const d=`M${x[n]-w} ${b}C${x[n]-w*1.35} ${b-h*.13} ${x[n]-w*.82} ${b-h*.34} ${x[n]-w*.55} ${b-h*.45}Q${x[n]-w*.48} ${b-h*.29} ${x[n]-w*.19} ${b-h*.35}C${tip+w*.13} ${b-h*.57} ${tip+w*.33} ${b-h*.83} ${tip} ${b-h}Q${tip+w*.8} ${b-h*.83} ${x[n]+w*.53} ${b-h*.53}Q${x[n]+w*.72} ${b-h*.62} ${x[n]+w*.87} ${b-h*.69}C${x[n]+w*.62} ${b-h*.4} ${x[n]+w*1.38} ${b-h*.16} ${x[n]+w*.82} ${b}Q${x[n]} ${b+13} ${x[n]-w} ${b}Z`;
+      const h=p.flameHeight*[1,.54,.64,.76,.53,.55,.36][n]*pulse;
+      const w=(8+i*[60,42,45,42,35,35,23][n]+burning*[26,18,19,16,16,11,8][n])*(1+.04*i);
+      const b=[752,723,727,722,713,704,716][n],tip=x[n]+sway+(n%2?-1:1)*w*.23;
+      const d=`M${x[n]-w} ${b}Q${x[n]-w*1.16} ${b-h*.19} ${x[n]-w*.79} ${b-h*.4}L${x[n]-w*.64} ${b-h*.61}Q${x[n]-w*.4} ${b-h*.5} ${x[n]-w*.26} ${b-h*.36}C${x[n]+w*.05} ${b-h*.59} ${tip+w*.35} ${b-h*.75} ${tip} ${b-h}Q${tip+w*.74} ${b-h*.82} ${x[n]+w*.43} ${b-h*.5}Q${x[n]+w*.64} ${b-h*.44} ${x[n]+w*.91} ${b-h*.66}Q${x[n]+w*.82} ${b-h*.36} ${x[n]+w*1.03} ${b-h*.2}L${x[n]+w*.79} ${b-3} ${x[n]+w*.35} ${b-12} ${x[n]+w*.12} ${b+2} ${x[n]-w*.3} ${b-9}Z`;
       node.setAttribute('d',d);node.setAttribute('opacity',presence*.94);
       this.flameGrain[n].setAttribute('d',d);this.flameGrain[n].setAttribute('opacity',presence*.7);
     });
     this.lowerFlames.forEach((node,n)=>{
       // Uneven roots sit in different clefts; the cross/front log cutouts break
       // their silhouettes into visible tongues rather than four floating flames.
-      const x=[638,726,844,925][n],b=[779,773,780,771][n],h=(10+i*[82,94,87,74][n])*(1+.09*Math.sin(t*1.8+n)),w=8+i*17;
-      node.setAttribute('d',`M${x-w} ${b}Q${x-w*1.5} ${b-h*.4} ${x} ${b-h}Q${x+w*.2} ${b-h*.38} ${x+w} ${b-h*.5}Q${x+w*1.8} ${b} ${x-w} ${b}Z`);
-      node.setAttribute('opacity',(.38+i*.45)*(n%2?.8:1));
+      const x=[555,688,855,1025][n],b=[770,744,750,768][n];
+      const h=(5+i*[45,68,66,50][n]+burning*[80,65,59,84][n])*(1+.08*Math.sin(t*1.8+n)),w=5+i*13+burning*12;
+      const bend=Math.sin(t*1.2+n*2)*7+(n%2?-7:6);
+      node.setAttribute('d',`M${x-w} ${b}Q${x-w*1.3} ${b-h*.37} ${x+bend} ${b-h}Q${x+bend+w*.4} ${b-h*.59} ${x-w*.1} ${b-h*.36}L${x+w*.87} ${b-h*.56}Q${x+w*.5} ${b-h*.2} ${x+w} ${b-3}L${x+w*.2} ${b-8}Z`);
+      node.setAttribute('opacity',(.12+burning*.7)*(n%2?.85:1));
     });
     this.contactFlames.forEach((node,n)=>{
-      const x=[698,790,869][n],b=[699,679,654][n],h=(4+i*36)*(1+.08*Math.sin(t*1.3+n*2)),w=3+i*8;
-      node.setAttribute('d',`M${x-w} ${b}q${-w*.6} ${-h*.3} ${w*.5} ${-h*.55}Q${x+2} ${b-h*.45} ${x+Math.sin(t+n)*2} ${b-h}Q${x+w*.9} ${b-h*.45} ${x+w} ${b}Z`);
-      node.setAttribute('opacity',smoothFire((i-.09)/.55)*(.68+n*.05));
+      const x=[686,799,934][n],b=[670,702,664][n],h=(3+i*29+burning*[52,65,47][n])*(1+.07*Math.sin(t*1.3+n*2)),w=3+i*7+burning*10;
+      const lean=Math.sin(t+n*2)*5+(n-1)*6;
+      node.setAttribute('d',`M${x-w} ${b}Q${x-w*1.2} ${b-h*.35} ${x+lean} ${b-h}Q${x+w*.75} ${b-h*.67} ${x+w*.12} ${b-h*.38}L${x+w} ${b-h*.47}Q${x+w*.55} ${b-h*.19} ${x+w*.8} ${b-4}L${x-w*.2} ${b-9}Z`);
+      node.setAttribute('opacity',smoothFire((i-.07)/.4)*(.79+n*.05));
     });
     const combustion=(.27+i*.59)*(.95+.05*Math.sin(t*.7));
     this.glow.setAttribute('opacity',combustion);

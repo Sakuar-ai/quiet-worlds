@@ -1,4 +1,4 @@
-import { FireplaceRenderer, fireMix } from './fireplace.js?v=phase2a-11';
+import { FireplaceRenderer, fireMix } from './fireplace.js?v=phase2a-12';
 import { worldArt, FIRE_MARK } from './world-art.js?v=phase2a-2';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
@@ -31,7 +31,7 @@ const SCENES = {
   },
   fireplace: {
     id: "fireplace", name: "Fireplace", mark: "♨", accent: "#b65332", initialIntensity: .42,
-    labels: ["Embers", "Roaring Fire"], whisper: "Warmth with nowhere else to be.",
+    labels: ["Embers", "Roaring Fire"], whisper: "",
     descriptions: ["A few embers are breathing.", "The fire is gently unfolding.", "The logs are speaking brightly."],
     aria: "A simple hand-drawn brick fireplace with small moving flames",
     audio: [

@@ -6,12 +6,12 @@ import {resolve,extname} from 'node:path';
 import assert from 'node:assert/strict';
 import {fireParameters} from '../dist/fireplace.js';
 
-const baseline='7132f045add8baf64e8d44b4079ca639901240e9';
+const baseline='c482fd4bf08bdca813d44e29bc5899d8b38253f3';
 const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{encoding:'utf8'});
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
-// No behavior or audio code is changed; only the Fireplace module cache key.
-assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-10'),oldApp);
+// Only the Fireplace module cache key and its extra poetic subtitle change.
+assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-11').replace('labels: ["Embers", "Roaring Fire"], whisper: ""','labels: ["Embers", "Roaring Fire"], whisper: "Warmth with nowhere else to be."'),oldApp);
 assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
@@ -88,6 +88,7 @@ try {
     // Wait for the shared static PNG used by the rear scene and front-log cutout.
     await current.page.evaluate(async()=>{const image=new Image();image.src='./art/fireplace-reference-v6.png';await image.decode();});
     const fireplace=await measure(current.page);
+    assert.equal(await current.page.locator('#world-whisper').textContent(),'','extra Fireplace scene copy is removed');
     assert.deepEqual(fireplace,rain,`${key}: Fireplace must inherit Rain geometry and control hierarchy`);
     const geometry=await current.page.evaluate(()=>{
       const q=selector=>document.querySelector(selector),rect=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};};
@@ -111,7 +112,7 @@ try {
     assert.deepEqual(await masonry(current.page),await masonry(old.page),`${key}: approved fireplace size and placement unchanged`);
     if(viewport.width===390)await old.page.screenshot({path:'test-results/fireplace-before-atmosphere.png'});
     const atmosphere=[];
-    for(const intensity of [0,.42,1]){
+    for(const intensity of [0,.5,1]){
       const state=await current.page.evaluate(i=>{
         const q=window.__sceneQA,f=q.renderer.fireplace;q.renderer.scene.setIntensity(i);q.slider.set(i);document.querySelector('#intensity-description').textContent=q.intensityText(q.renderer.scene,i);f.last=null;f.update(0,i);
         const box=f.lightField.getBoundingClientRect(),hearth=f.hearthLight.getBoundingClientRect();
@@ -144,18 +145,43 @@ try {
     const liveLayers='.fire-environment,.fire-live-interior,.fire-log-rim,.fire-log-heat,.fire-log-char,.fire-contact-hotspots,.fire-ember-falls,.fire-seam-embers,.fire-embers,.fire-sparks';
     for(const page of [old.page,current.page])await page.locator(liveLayers).evaluateAll(nodes=>nodes.forEach(e=>e.style.display='none'));
     for(const page of [old.page,current.page])await page.evaluate(()=>{const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,.42);});
+    // The removed subtitle is the one deliberate information-hierarchy change.
+    await old.page.locator('#world-whisper').evaluate(e=>e.textContent='');
     const oldScene=await old.page.locator('.world').screenshot(),withoutAtmosphere=await current.page.locator('.world').screenshot();
     assert.ok(oldScene.equals(withoutAtmosphere),`${key}: static fireplace artwork and layout must be pixel-identical`);
     for(const page of [old.page,current.page])await page.locator(liveLayers).evaluateAll(nodes=>nodes.forEach(e=>e.style.display=''));
     // Re-render at one shared clock for a meaningful close-up comparison.
     if(viewport.width===390){
       for(const [name,page] of [['before',old.page],['after',current.page]]){
-        await page.evaluate(()=>{const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,.42);});
+        await page.evaluate(()=>{const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,.5);});
         const clip=await page.locator('.fire-illustration').evaluate(e=>{const m=e.getScreenCTM(),a=new DOMPoint(400,420).matrixTransform(m),b=new DOMPoint(1130,824).matrixTransform(m);return {x:a.x,y:a.y,width:b.x-a.x,height:b.y-a.y};});
         await page.screenshot({path:`test-results/burning-logs-${name}.png`,clip});
       }
     }
     if(viewport.width===390){
+      const distribution=[];
+      for(const intensity of [.35,.5,.6]){
+        const states=[];
+        for(const [name,page] of [['before',old.page],['after',current.page]]){
+          states.push(await page.evaluate(i=>{
+            const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,i);
+            const box=e=>{const b=e.getBBox();return {x:b.x,y:b.y,width:b.width,height:b.height};};
+            return {main:f.flames.map(box),lower:f.lowerFlames.map(box),contacts:f.contactFlames.map(box),bedZones:[...f.glow.querySelectorAll(':scope > path')].map(p=>(p.getAttribute('d').match(/M/g)||[]).length),nodeCount:f.element.querySelectorAll('*').length};
+          },intensity));
+          const clip=await page.locator('.fire-illustration').evaluate(e=>{const m=e.getScreenCTM(),a=new DOMPoint(400,360).matrixTransform(m),b=new DOMPoint(1130,824).matrixTransform(m);return {x:a.x,y:a.y,width:b.x-a.x,height:b.y-a.y};});
+          await page.screenshot({path:`test-results/medium-${intensity}-${name}.png`,clip});
+        }
+        const [before,after]=states;
+        assert.equal(after.nodeCount,before.nodeCount,'redistribute existing shapes, never add texture or detail');
+        assert.equal(after.main.length,7);assert.equal(after.lower.length,4);assert.equal(after.contacts.length,3);
+        assert.ok(after.main[0].width>before.main[0].width*1.15,'middle fire has connected broader shoulders, not just taller tips');
+        assert.ok(after.main[0].height<before.main[0].height*1.05,'do not simply enlarge the whole main flame');
+        assert.ok(after.lower[0].x<before.lower[0].x-50&&after.lower[3].x>before.lower[3].x+50,'existing small roots reach both wood edges');
+        assert.ok(after.contacts.every((p,n)=>p.height>before.contacts[n].height*1.5),'small/medium flame activity distributed through wood clefts');
+        assert.ok(after.bedZones.every(n=>n>=3),'ember bed has separated uneven heat islands, no continuous strip');
+        distribution.push({intensity,before,after});
+      }
+      writeFileSync('test-results/combustion-distribution.json',JSON.stringify(distribution,null,2));
       const combustion=await current.page.evaluate(()=>{
         const f=window.__sceneQA.renderer.fireplace,q=s=>document.querySelector(s);
         const wood=()=>['.fire-rear-logs','.fire-log-interleave','.fire-logs'].map(s=>q(s).outerHTML).join('');
@@ -265,9 +291,9 @@ try {
   await comparison.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>`+['fireplace-before-atmosphere','390x844-fireplace'].map((name,n)=>`<figure><figcaption>${n?'Local pencil firelight · default intensity':'Before · same fireplace and size'}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/'+name+'.png').toString('base64')}"/></figure>`).join(''));
   await comparison.screenshot({path:'test-results/firelight-before-after.png'});await comparison.close();
   const intensityReport=await browser.newPage({viewport:{width:1210,height:900},deviceScaleFactor:1});
-  await intensityReport.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>`+[0,.42,1].map((i,n)=>`<figure><figcaption>${['Embers · 0%','Gentle fire · 42%','Roaring fire · 100%'][n]}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/atmosphere-'+i+'.png').toString('base64')}"/></figure>`).join(''));
+  await intensityReport.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>`+[0,.5,1].map((i,n)=>`<figure><figcaption>${['Embers · 0%','Active burning · 50%','Roaring fire · 100%'][n]}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/atmosphere-'+i+'.png').toString('base64')}"/></figure>`).join(''));
   await intensityReport.screenshot({path:'test-results/intensity-comparison.png'});await intensityReport.close();
   const detailReport=await browser.newPage({viewport:{width:900,height:310},deviceScaleFactor:1});
-  await detailReport.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0;width:440px}figcaption{text-align:center;padding:14px 0}img{width:440px}</style>`+['before','after'].map(name=>`<figure><figcaption>${name==='before'?'Before · 42% intensity':'After · interwoven roots, embers and warm log edges'}</figcaption><img src="data:image/png;base64,${readFileSync('test-results/burning-logs-'+name+'.png').toString('base64')}"/></figure>`).join(''));
+  await detailReport.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0;width:440px}figcaption{text-align:center;padding:14px 0}img{width:440px}</style>`+['before','after'].map(name=>`<figure><figcaption>${name==='before'?'Before · 50% intensity':'After · connected fire, distributed roots, broken ember bed'}</figcaption><img src="data:image/png;base64,${readFileSync('test-results/burning-logs-'+name+'.png').toString('base64')}"/></figure>`).join(''));
   await detailReport.screenshot({path:'test-results/burning-logs-comparison.png'});await detailReport.close();
 } finally {await browser.close();await new Promise(done=>server.close(done));}
