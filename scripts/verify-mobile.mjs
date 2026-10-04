@@ -10,7 +10,7 @@ const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{enc
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
 // No behavior or audio code is changed; only the Fireplace module cache key.
-assert.equal(app.replace('fireplace.js?v=phase2a-5','fireplace.js?v=phase2a-4'),oldApp);
+assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-4'),oldApp);
 assert.equal(readFileSync('dist/world-art.js','utf8'),previous('world-art.js'));
 const oldFire=previous('fireplace.js'),fire=readFileSync('dist/fireplace.js','utf8');
 const mix=source=>source.slice(source.indexOf('export function fireMix'),source.indexOf('export class FireplaceRenderer')).trim();
@@ -41,7 +41,7 @@ const makePage=async(viewport,old=false)=>{
   return {page,errors};
 };
 try {
-  for(const viewport of [{width:390,height:844},{width:375,height:812},{width:430,height:932},{width:375,height:667}]){
+  for(const viewport of [{width:390,height:844},{width:393,height:852},{width:375,height:812},{width:430,height:932},{width:375,height:667}]){
     const key=`${viewport.width}x${viewport.height}`,old=await makePage(viewport,true),current=await makePage(viewport);
     const before=await measure(old.page),rain=await measure(current.page);
     assert.deepEqual(rain,before,`${key}: approved Rain layout must remain identical`);
@@ -67,25 +67,31 @@ try {
     await current.page.locator('#scene-trigger').click();
     await current.page.locator('[data-world="fireplace"]').click();
     await current.page.evaluate(()=>{const r=window.__sceneQA.renderer;r.transition=null;r.render(r.start+3000);});
+    // Wait for the shared static PNG used by the rear scene and front-log cutout.
+    await current.page.evaluate(async()=>{const image=new Image();image.src='./art/fireplace-reference-v6.png';await image.decode();});
     const fireplace=await measure(current.page);
     assert.deepEqual(fireplace,rain,`${key}: Fireplace must inherit Rain geometry and control hierarchy`);
     const geometry=await current.page.evaluate(()=>{
       const q=selector=>document.querySelector(selector),rect=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};};
-      const r=window.__sceneQA.renderer,world=rect(q('#scene-canvas')),subject=rect(q('.fire-structure'));
+      const r=window.__sceneQA.renderer,world=rect(q('#scene-canvas')),subject=rect(q('.fire-masonry-bounds'));
       const data=r.rainWater.getContext('2d').getImageData(0,0,r.rainWater.width,r.rainWater.height).data;
       let waterInk=0;for(let n=3;n<data.length;n+=4)waterInk+=data[n]/255;
       return {world,svg:rect(q('.fireplace-world')),subject,subjectWidthRatio:subject.width/world.width,subjectHeightRatio:subject.height/world.height,waterInkFraction:waterInk/(data.length/4),paper:getComputedStyle(q('.app')).backgroundColor,overflow:document.documentElement.scrollWidth>innerWidth};
     });
     assert.deepEqual(geometry.svg,geometry.world,`${key}: SVG and Rain canvas boxes match`);
-    assert.ok(geometry.subjectWidthRatio>.4&&geometry.subjectWidthRatio<.72,`${key}: small observed object, not an oversized illustration`);
-    assert.ok(geometry.subjectHeightRatio>.2&&geometry.subjectHeightRatio<.4,`${key}: generous vertical negative space`);
+    assert.ok(geometry.subjectWidthRatio>=.4&&geometry.subjectWidthRatio<=.45,`${key}: user's explicit 40–45% masonry width`);
+    assert.ok(geometry.subjectHeightRatio>.1&&geometry.subjectHeightRatio<.3,`${key}: natural artwork proportions and white negative space`);
     assert.equal(geometry.paper,'rgb(251, 251, 252)');assert.equal(geometry.overflow,false);
     await current.page.screenshot({path:`test-results/${key}-fireplace.png`});
     const captures={};
+    const staticArtwork=await current.page.locator('.fire-structure').innerHTML(),frontLog=await current.page.locator('.fire-logs').innerHTML();
     for(const intensity of [0,.5,1]){
       await current.page.evaluate(i=>{const r=window.__sceneQA.renderer;r.scene.setIntensity(i);for(let n=0;n<90;n++)r.fireplace.update(n/60,i);},intensity);
       captures[intensity]=await current.page.locator('.fire-flames').innerHTML();
       assert.ok(!captures[intensity].includes('NaN'));
+      assert.equal(await current.page.locator('.fire-structure').innerHTML(),staticArtwork,`${key}: masonry and rear logs remain static`);
+      assert.equal(await current.page.locator('.fire-logs').innerHTML(),frontLog,`${key}: front log remains static`);
+      const occlusion=await current.page.locator('.fire-logs use').getAttribute('clip-path');assert.equal(occlusion,'url(#fire-front-log)');
       if(viewport.width===390)await current.page.screenshot({path:`test-results/fire-${intensity}.png`});
     }
     assert.notEqual(captures[0],captures[1]);
@@ -99,7 +105,7 @@ try {
   writeFileSync('test-results/mobile-measurements.json',JSON.stringify(measurements,null,2));
   // Actual browser screenshots are shown together without resizing either scene.
   const report=await browser.newPage({viewport:{width:800,height:900},deviceScaleFactor:1});
-  const images=['390x844-rain','390x844-fireplace'].map(name=>`<figure><figcaption>${name.endsWith('rain')?'Approved Rain':'Minimal Fireplace'}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/'+name+'.png').toString('base64')}"/></figure>`).join('');
+  const images=['390x844-rain','390x844-fireplace'].map(name=>`<figure><figcaption>${name.endsWith('rain')?'Approved Rain':'Reference Fireplace · 42.5% width'}</figcaption><img width="390" height="844" src="data:image/png;base64,${readFileSync('test-results/'+name+'.png').toString('base64')}"/></figure>`).join('');
   await report.setContent(`<style>body{margin:0;background:white;display:flex;gap:20px;font:14px system-ui;color:#58616a}figure{margin:0}figcaption{text-align:center;padding:14px 0}</style>${images}`);
   await report.screenshot({path:'test-results/iphone-side-by-side.png'});await report.close();
 } finally {await browser.close();await new Promise(done=>server.close(done));}
