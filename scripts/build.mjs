@@ -18,4 +18,5 @@ const fire=readFileSync('dist/fireplace.js','utf8');
 for(const [,path] of fire.matchAll(/href="\.\/([^"?#]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing fireplace asset: ${path}`);
 for(const layer of ['fire-environment','firelight-field','firelight-hearth','fire-structure','fire-glow','fire-coal-bed','fire-lower-flames','fire-flames','fire-log-interleave','fire-logs','fire-log-heat','fire-seam-embers','fire-embers','fire-sparks']) assert.ok(fire.includes(layer),`Missing independent layer: ${layer}`);
 assert.ok(!readFileSync('dist/styles.css','utf8').includes('53svh'),'No Fireplace-only scene height');
+for(const layer of ['fire-root-system','fire-contact-flames','fire-log-char','fire-contact-hotspots','fire-ember-falls'])assert.ok(fire.includes(layer),`Missing ambient combustion layer: ${layer}`);
 console.log('Static build passed: module syntax, entry/audio/art assets, aligned static artwork and independent live fire layers. Deployment directory: dist/');

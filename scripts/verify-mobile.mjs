@@ -6,12 +6,12 @@ import {resolve,extname} from 'node:path';
 import assert from 'node:assert/strict';
 import {fireParameters} from '../dist/fireplace.js';
 
-const baseline='757e56899c3df702ea8038a7829d1112e06245a7';
+const baseline='7132f045add8baf64e8d44b4079ca639901240e9';
 const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{encoding:'utf8'});
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
 // No behavior or audio code is changed; only the Fireplace module cache key.
-assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-9'),oldApp);
+assert.equal(app.replace(/fireplace\.js\?v=phase2a-\d+/,'fireplace.js?v=phase2a-10'),oldApp);
 assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
@@ -139,17 +139,13 @@ try {
     assert.equal(integration.layerOrder,true);assert.equal(integration.crossClip,'url(#fire-cross-log)');assert.equal(integration.frontClip,'url(#fire-front-log)');
     assert.equal(integration.heatClip,'url(#fire-all-logs)');assert.equal(integration.seamMask,'url(#fire-between-logs)');
     assert.equal(integration.coals,13);assert.equal(integration.seams,9);assert.equal(integration.originalWeight,'.82');assert.equal(integration.softWeight,'.18');
-    // Disable only this pass's texture attenuation and extra log cutouts, plus
-    // both versions' live response. This must recover the exact approved image.
-    const liveLayers='.fire-environment,.fire-live-interior,.fire-log-rim,.fire-log-heat,.fire-seam-embers,.fire-embers,.fire-sparks';
+    // Hide live heat in both versions: the approved fixed wood and masonry,
+    // including the existing texture attenuation and cutouts, must be identical.
+    const liveLayers='.fire-environment,.fire-live-interior,.fire-log-rim,.fire-log-heat,.fire-log-char,.fire-contact-hotspots,.fire-ember-falls,.fire-seam-embers,.fire-embers,.fire-sparks';
     for(const page of [old.page,current.page])await page.locator(liveLayers).evaluateAll(nodes=>nodes.forEach(e=>e.style.display='none'));
-    await current.page.locator('.fire-structure use').evaluate(e=>e.removeAttribute('filter'));
-    await current.page.locator('.fire-rear-logs,.fire-log-interleave').evaluateAll(nodes=>nodes.forEach(e=>e.style.display='none'));
     for(const page of [old.page,current.page])await page.evaluate(()=>{const f=window.__sceneQA.renderer.fireplace;f.time=0;f.sparkTime=0;f.last=null;f.update(0,.42);});
     const oldScene=await old.page.locator('.world').screenshot(),withoutAtmosphere=await current.page.locator('.world').screenshot();
     assert.ok(oldScene.equals(withoutAtmosphere),`${key}: static fireplace artwork and layout must be pixel-identical`);
-    await current.page.locator('.fire-structure use').evaluate(e=>e.setAttribute('filter','url(#fire-soften-hatching)'));
-    await current.page.locator('.fire-rear-logs,.fire-log-interleave').evaluateAll(nodes=>nodes.forEach(e=>e.style.display=''));
     for(const page of [old.page,current.page])await page.locator(liveLayers).evaluateAll(nodes=>nodes.forEach(e=>e.style.display=''));
     // Re-render at one shared clock for a meaningful close-up comparison.
     if(viewport.width===390){
@@ -160,6 +156,42 @@ try {
       }
     }
     if(viewport.width===390){
+      const combustion=await current.page.evaluate(()=>{
+        const f=window.__sceneQA.renderer.fireplace,q=s=>document.querySelector(s);
+        const wood=()=>['.fire-rear-logs','.fire-log-interleave','.fire-logs'].map(s=>q(s).outerHTML).join('');
+        const original=wood(),count=q('.fire-illustration').querySelectorAll('*').length,samples=[];
+        for(const seconds of [0,60,3600,86400,604800])for(const intensity of [0,.42,1,0]){
+          f.time=seconds;f.sparkTime=seconds;f.last=null;f.update(seconds,intensity);
+          samples.push({seconds,intensity,woodUnchanged:wood()===original,nodeCount:q('.fire-illustration').querySelectorAll('*').length,charOpacity:Number(f.logChar.getAttribute('opacity')),finite:!q('.fire-illustration').outerHTML.includes('NaN')});
+        }
+        const falls=[];
+        for(const intensity of [0,.42,1]){
+          f.sparkTime=0;f.time=0;f.last=null;let visibleFrames=0,maxVisible=0,minY=Infinity,maxY=-Infinity;
+          for(let frame=0;frame<3600;frame++){
+            f.update(frame*.05,intensity);
+            const visible=f.emberFalls.filter(e=>Number(e.getAttribute('opacity'))>.1);
+            if(visible.length)visibleFrames++;maxVisible=Math.max(maxVisible,visible.length);
+            for(const e of visible){const y=Number(e.getAttribute('d').match(/^M[\d.\-]+ ([\d.\-]+)/)[1]);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+          }
+          falls.push({intensity,maxVisible,visibleFraction:visibleFrames/3600,minY:Number.isFinite(minY)?minY:null,maxY:Number.isFinite(maxY)?maxY:null});
+        }
+        return {count,samples,falls,rootMask:q('.fire-root-system').getAttribute('mask'),charClip:q('.fire-log-char').getAttribute('clip-path'),hotspotClip:q('.fire-contact-hotspots').getAttribute('clip-path'),fallMask:q('.fire-ember-falls').getAttribute('mask'),contacts:f.contactFlames.length,charMarks:f.charMarks.length,hotspots:f.contactHotspots.length,fallPool:f.emberFalls.length};
+      });
+      assert.equal(combustion.rootMask,'url(#fire-root-occlusion)');
+      assert.equal(combustion.charClip,'url(#fire-all-logs)');assert.equal(combustion.hotspotClip,'url(#fire-all-logs)');assert.equal(combustion.fallMask,'url(#fire-between-logs)');
+      assert.equal(combustion.contacts,3);assert.equal(combustion.charMarks,6);assert.equal(combustion.hotspots,6);assert.equal(combustion.fallPool,3);
+      for(const sample of combustion.samples){
+        assert.ok(sample.woodUnchanged&&sample.finite,'wood never shrinks, moves, disappears or depletes');
+        assert.equal(sample.nodeCount,combustion.count,'no accumulating ash or new particles');
+        assert.ok(Math.abs(sample.charOpacity-(.09+.46*sample.intensity))<1e-8,'charring is reversible intensity response, never elapsed-time damage');
+      }
+      for(const fall of combustion.falls){
+        assert.ok(fall.maxVisible<=2&&fall.visibleFraction<.3,'occasional cinders, not particle rain');
+        if(fall.intensity===0)assert.equal(fall.maxVisible,0);
+        else {assert.ok(fall.maxVisible>0);assert.ok(fall.minY>=757&&fall.maxY<=802,'short falls end inside ember bed');}
+      }
+      writeFileSync('test-results/ambient-combustion.json',JSON.stringify(combustion,null,2));
+      console.log('PASS reversible contact heat, fixed wood at long-time phase samples, bounded cinder falls:',JSON.stringify(combustion.falls));
       const sparkStats=await current.page.evaluate(()=>{
         const fire=window.__sceneQA.renderer.fireplace,stats=[];
         for(const intensity of [.05,.15,.42,1]){

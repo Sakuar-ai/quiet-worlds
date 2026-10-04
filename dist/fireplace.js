@@ -100,6 +100,7 @@ export class FireplaceRenderer {
           <clipPath id="fire-all-logs"><use href="#fire-rear-log-shape"/><use href="#fire-cross-log-shape"/><use href="#fire-front-log-shape"/></clipPath>
           <mask id="fire-behind-front-log" maskUnits="userSpaceOnUse" x="0" y="0" width="1536" height="1024"><rect width="1536" height="1024" fill="white"/><use href="#fire-front-log-shape" fill="black"/></mask>
           <mask id="fire-between-logs" maskUnits="userSpaceOnUse" x="400" y="570" width="720" height="250"><rect x="400" y="570" width="720" height="250" fill="white"/><g fill="black"><use href="#fire-rear-log-shape"/><use href="#fire-cross-log-shape"/><use href="#fire-front-log-shape"/></g></mask>
+          <mask id="fire-root-occlusion" maskUnits="userSpaceOnUse" x="350" y="250" width="860" height="560"><rect x="350" y="250" width="860" height="560" fill="white"/><use href="#fire-rear-log-shape" fill="black"/></mask>
           <filter id="fire-soften-hatching" color-interpolation-filters="sRGB" x="-1%" y="-1%" width="102%" height="102%"><feGaussianBlur in="SourceGraphic" stdDeviation="4" result="pigment"/><feComposite in="SourceGraphic" in2="pigment" operator="arithmetic" k2=".82" k3=".18" result="softened"/><feComposite in="softened" in2="SourceGraphic" operator="atop"/></filter>
           <clipPath id="fire-cavity"><path d="M365 798 366 386Q580 253 776 260Q980 254 1208 384L1208 799Z"/></clipPath>
           <filter id="fire-pencil" x="-4%" y="-4%" width="108%" height="108%"><feTurbulence type="fractalNoise" baseFrequency=".14" numOctaves="3" seed="14" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="3.2" result="rough"/><feColorMatrix in="grain" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .333 .333 .334 0 0"/><feComponentTransfer><feFuncA type="table" tableValues=".45 .85 1 1 1"/></feComponentTransfer><feComposite in="rough" operator="in"/></filter>
@@ -117,18 +118,24 @@ export class FireplaceRenderer {
             <path d="M635 707Q687 681 718 704L751 735 727 771 695 753 673 766 651 744Z M791 698Q849 680 913 706L900 751 863 769 833 744 806 755Z" fill="#d66b32" opacity=".5"/>
             <g class="fire-coal-bed"></g>
           </g>
-          <g class="fire-lower-flames" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
-          <g class="fire-flames" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
-          <g class="fire-flame-grain"></g>
+          <g class="fire-root-system" mask="url(#fire-root-occlusion)">
+            <g class="fire-lower-flames" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
+            <g class="fire-contact-flames" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
+            <g class="fire-flames" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
+            <g class="fire-flame-grain"></g>
+          </g>
         </g>
         <g class="fire-log-interleave"><use href="#fire-pencil-art" clip-path="url(#fire-cross-log)"/></g>
         <g class="fire-logs"><use href="#fire-pencil-art" clip-path="url(#fire-front-log)"/></g>
+        <g class="fire-log-char" clip-path="url(#fire-all-logs)" stroke-linecap="round" stroke-linejoin="round" filter="url(#fire-pencil)"></g>
         <g class="fire-log-heat" clip-path="url(#fire-all-logs)" fill="none" stroke-linecap="round" filter="url(#fire-pencil)">
           <path d="M584 659Q659 688 716 690M554 751Q613 744 670 735M791 739Q907 756 983 763M632 758Q782 719 959 667" stroke="#763c29" stroke-width="14" opacity=".66"/>
           <path d="M590 623Q659 650 754 671M552 695Q610 694 658 707M824 711Q902 704 981 714M627 718Q777 671 946 629" stroke="#d87638" stroke-width="15" opacity=".7" stroke-dasharray="43 8 29 12 17 7"/>
           <path class="fire-log-rim" d="M597 628Q661 652 744 673M568 698L621 702M841 713Q912 709 973 717M637 720Q793 669 941 634" stroke="#f6b965" stroke-width="6" stroke-dasharray="27 9 8 13 35 11"/>
         </g>
+        <g class="fire-contact-hotspots" clip-path="url(#fire-all-logs)" fill="none" stroke-linecap="round"></g>
         <g class="fire-seam-embers" mask="url(#fire-between-logs)" stroke-linecap="round" filter="url(#fire-pencil)"></g>
+        <g class="fire-ember-falls" mask="url(#fire-between-logs)" fill="none" stroke-linecap="round"></g>
         <g class="fire-embers" stroke-linecap="round" filter="url(#fire-pencil)"></g>
         <g class="fire-sparks" fill="none" stroke-linecap="round" stroke-linejoin="round"></g>
       </svg>
@@ -148,6 +155,18 @@ export class FireplaceRenderer {
     this.flames = colors.map((color,n) => add('.fire-flames','path',{fill:color,stroke:n<3?'#df7142':'#f6c46d','stroke-width':2.5}));
     this.flameGrain = colors.map(() => add('.fire-flame-grain','path',{fill:'url(#fire-hatch)'}));
     this.lowerFlames = Array.from({length:4},(_,n)=>add('.fire-lower-flames','path',{fill:n%2?'#f8bc68':'#df793d',stroke:'#eb994e','stroke-width':1.8}));
+    this.contactFlames = Array.from({length:3},(_,n)=>add('.fire-contact-flames','path',{fill:n%2?'#e49b4a':'#f2b663',stroke:'#e28e44','stroke-width':1.8}));
+    // Contact marks never grow with elapsed time. Their fixed silhouettes only
+    // deepen with the slider; returning to Embers restores the normal wood tone.
+    const contacts=[[666,655],[711,701],[778,679],[862,653],[898,715],[939,718]];
+    this.charMarks=contacts.map(([x,y],n)=>add('.fire-log-char','path',{
+      d:`M${x-12} ${y+5}l7 -9 11 2 7 -4 10 5 -6 5 3 5 -13 -2 -8 4Z M${x-17} ${y+9}l9 -3m17 -9 7 -3`,
+      fill:n%2?'#694334':'#76503c',stroke:'#694333','stroke-width':2.5
+    }));
+    this.contactHotspots=contacts.map(([x,y],n)=>add('.fire-contact-hotspots','path',{
+      d:`M${x-3} ${y-4}q3 -3 ${7+n%2*3} -2`,stroke:n%2?'#f4bd71':'#e9944d','stroke-width':3+n%3*.6
+    }));
+    this.emberFalls=Array.from({length:3},(_,n)=>add('.fire-ember-falls','path',{stroke:n%2?'#e99c50':'#f3bb68','stroke-width':3.5}));
     this.coals = Array.from({length:13},(_,n)=>{
       const x=559+(n*73%448),y=762+(n*11%29),w=5+n%4*2;
       return add('.fire-coal-bed','path',{d:`M${x-w} ${y}l${w*.7} -4 ${w*1.1} 1 ${w*.6} 5 -${w} 3 -${w*.8} -1Z`,fill:n%3?'#e57b37':'#873923',stroke:n%3?'#f4b458':'#c9612d','stroke-width':2});
@@ -163,6 +182,7 @@ export class FireplaceRenderer {
     this.glow = this.element.querySelector('.fire-glow');
     this.structureArt = this.element.querySelector('.fire-structure use');
     this.logHeat = this.element.querySelector('.fire-log-heat');
+    this.logChar = this.element.querySelector('.fire-log-char');
     this.logRim = this.element.querySelector('.fire-log-rim');
     this.time=0;this.sparkTime=0;this.last=null;this.visible=false;
     this.update(0,0,true);
@@ -206,12 +226,28 @@ export class FireplaceRenderer {
       node.setAttribute('d',`M${x-w} ${b}Q${x-w*1.5} ${b-h*.4} ${x} ${b-h}Q${x+w*.2} ${b-h*.38} ${x+w} ${b-h*.5}Q${x+w*1.8} ${b} ${x-w} ${b}Z`);
       node.setAttribute('opacity',(.38+i*.45)*(n%2?.8:1));
     });
-    const combustion=(.27+i*.54)*(.95+.05*Math.sin(t*.7));
+    this.contactFlames.forEach((node,n)=>{
+      const x=[698,790,869][n],b=[699,679,654][n],h=(4+i*36)*(1+.08*Math.sin(t*1.3+n*2)),w=3+i*8;
+      node.setAttribute('d',`M${x-w} ${b}q${-w*.6} ${-h*.3} ${w*.5} ${-h*.55}Q${x+2} ${b-h*.45} ${x+Math.sin(t+n)*2} ${b-h}Q${x+w*.9} ${b-h*.45} ${x+w} ${b}Z`);
+      node.setAttribute('opacity',smoothFire((i-.09)/.55)*(.68+n*.05));
+    });
+    const combustion=(.27+i*.59)*(.95+.05*Math.sin(t*.7));
     this.glow.setAttribute('opacity',combustion);
-    this.logHeat.setAttribute('opacity',.16+i*.54);
+    this.logHeat.setAttribute('opacity',.13+i*.62);
     this.logRim.setAttribute('opacity',.4+i*.42);
+    this.logChar.setAttribute('opacity',.09+i*.46);
+    this.contactHotspots.forEach((node,n)=>node.setAttribute('opacity',smoothFire((i-.09-n*.05)/.45)*(.3+.45*Math.sin(t*.67+n*1.7)**2)));
     this.coals.forEach((node,n)=>node.setAttribute('opacity',.62+.25*Math.sin(t*.7+n*1.9)**2));
     this.seamEmbers.forEach((node,n)=>node.setAttribute('opacity',combustion*(.68+.23*Math.sin(t*.7+n*1.9)**2)));
+    // Reusable short-lived cinders, not fragments removed from a log. No fuel,
+    // age, ash counter, shape mutation or accumulated burn-down state exists.
+    this.emberFalls.forEach((node,n)=>{
+      const phase=(this.sparkTime*.055+.31+n*.271)%1;
+      const progress=phase/(.075+i*.025),fall=Math.min(1,progress)**1.35;
+      const x=[676,811,947][n]+Math.sin(progress*2+n)*2,y=[760,757,767][n]+fall*[30,35,25][n];
+      node.setAttribute('d',`M${x} ${y}l${n%2?-1:1} 2.5`);
+      node.setAttribute('opacity',progress<1?smoothFire((i-.12-n*.24)/.32)*Math.sin(progress*Math.PI)*.78:0);
+    });
     this.embers.forEach((node,n)=>node.setAttribute('opacity',p.emberGlow*(.75+.25*Math.sin(t*(.9+n*.03)+n*2)**2)));
     this.sparks.forEach((node,n)=>{
       // Broad, overlapping lifetimes prevent empty medium-intensity frames.
