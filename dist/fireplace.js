@@ -74,7 +74,7 @@ export class FireplaceRenderer {
     // x=136..1414, so 84% * 1278/1536 = 69.9% of Rain's usable scene width.
     // A nested SVG preserves the artwork's aspect ratio without a new canvas layout.
     this.element.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Colored-pencil arched brick fireplace with fire emerging between stacked logs">
-      <svg class="fire-environment" x="8%" y="0" width="84%" height="100%" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid meet" overflow="visible">
+      <svg class="fire-environment" x="8%" y="0" width="84%" height="100%" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid meet" overflow="visible" style="display:none">
         <defs>
           <filter id="firelight-soft-edge" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="14"/></filter>
         </defs>
@@ -121,6 +121,7 @@ export class FireplaceRenderer {
       return node;
     };
     drawFirelight(add);
+    this.environment=this.element.querySelector('.fire-environment');
     this.lightField=this.element.querySelector('.firelight-field');
     this.hearthLight=this.element.querySelector('.firelight-hearth');
     const colors = ['#d95f35','#e78342','#e96d38','#f1a54f','#ee9145','#ffd47e','#fff0b9'];
@@ -139,6 +140,8 @@ export class FireplaceRenderer {
 
   setVisible(visible) {
     this.visible=visible;
+    // Do not composite a filtered light field underneath unrelated worlds.
+    this.environment.style.display=visible?'':'none';
     this.element.classList.toggle('is-active',visible);
     this.element.setAttribute('aria-hidden',String(!visible));
   }
