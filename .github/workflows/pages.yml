@@ -30,6 +30,8 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Install native offline audio dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libjack-jackd2-dev
       - name: Install test dependencies
         run: npm ci
       - name: Validate static build
@@ -38,8 +40,14 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Compare Rain and Fireplace on iPhone viewports
         run: npm run test:ui
-      - name: Verify single-bed Fireplace audio and render listening samples
+      - name: Verify slider-selected Fireplace regions and render listening samples
         run: npm run test:audio
+      - name: Verify actual mobile-browser playback and region switching
+        run: npm run test:browser-audio
+      - name: Install spectral QA dependencies
+        run: python3 -m pip install numpy==2.5.3 scipy==1.18.1 soundfile==0.14.0
+      - name: Verify source preservation and long loop seam
+        run: npm run test:spectral
       - name: Save viewport screenshots and measurements
         if: always()
         uses: actions/upload-artifact@v4
@@ -47,6 +55,8 @@ jobs:
           name: iphone-layout-checks
           path: test-results
           retention-days: 14
+      - name: Require listening approval before publishing revised fire audio
+        run: node -e "const m=require('./dist/audio/fireplace-visionear-regions-v2.json'); if(m.reviewStatus!=='APPROVED')throw new Error('Region transition preview needs listening approval before publication')"
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static website

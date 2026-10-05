@@ -1,0 +1,151 @@
+{
+  "version": "visionear-1-preview",
+  "reviewStatus": "LISTENING_APPROVAL_REQUIRED",
+  "url": "./audio/fireplace-visionear-v1.flac",
+  "author": "visionear",
+  "license": "CC0-1.0",
+  "sourceURL": "https://freesound.org/people/visionear/sounds/501417/",
+  "sourceSHA256": "3cd3ff55829222efc4d15096309afa1ea4412ad5c9fa518909bc1b3ca8af4c59",
+  "sourceDurationSeconds": 714.0,
+  "sourceStartSeconds": 20.0,
+  "sourceEndSeconds": 516.0,
+  "sampleRate": 48000,
+  "channels": 2,
+  "durationSeconds": 496.0,
+  "loopStartSeconds": 6.0,
+  "loopEndSeconds": 496.0,
+  "crossfadeSeconds": 6.0,
+  "initialFadeSeconds": 0.35,
+  "deliveryGainDB": 0,
+  "processing": [
+    "local cosine clip-gain edits",
+    "six-second end/head cosine edit crossfade"
+  ],
+  "localEdits": [
+    {
+      "sourcePeakSeconds": 27.325979166666666,
+      "sourceWindowSeconds": [
+        27.260979166666665,
+        27.565979166666665
+      ],
+      "originalPeakDB": -3.1482513645760877,
+      "gainDB": -8.851748635423911,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 54.07997916666667,
+      "sourceWindowSeconds": [
+        54.01497916666667,
+        54.31997916666667
+      ],
+      "originalPeakDB": -6.765052691585984,
+      "gainDB": -5.234947308414015,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 59.37854166666666,
+      "sourceWindowSeconds": [
+        59.313541666666666,
+        59.618541666666665
+      ],
+      "originalPeakDB": -2.725467067090997,
+      "gainDB": -9.274532932909004,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 67.81539583333333,
+      "sourceWindowSeconds": [
+        67.75039583333333,
+        68.05539583333334
+      ],
+      "originalPeakDB": -5.321014491861736,
+      "gainDB": -6.678985508138263,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 86.59220833333333,
+      "sourceWindowSeconds": [
+        86.52720833333333,
+        86.83220833333333
+      ],
+      "originalPeakDB": -3.0810784206974744,
+      "gainDB": -8.918921579302525,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 191.0946875,
+      "sourceWindowSeconds": [
+        191.0296875,
+        191.3346875
+      ],
+      "originalPeakDB": -2.369221081508509,
+      "gainDB": -9.63077891849149,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 231.60085416666666,
+      "sourceWindowSeconds": [
+        231.53585416666667,
+        231.84085416666667
+      ],
+      "originalPeakDB": -6.270917498088253,
+      "gainDB": -5.729082501911746,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 268.78527083333336,
+      "sourceWindowSeconds": [
+        268.7202708333333,
+        269.02527083333337
+      ],
+      "originalPeakDB": -7.860912603045253,
+      "gainDB": -4.139087396954747,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 281.0722916666667,
+      "sourceWindowSeconds": [
+        281.0072916666667,
+        281.3122916666667
+      ],
+      "originalPeakDB": -7.532261741752217,
+      "gainDB": -4.467738258247783,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 353.61020833333333,
+      "sourceWindowSeconds": [
+        353.54520833333333,
+        353.85020833333334
+      ],
+      "originalPeakDB": -3.237334818768881,
+      "gainDB": -8.76266518123112,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    },
+    {
+      "sourcePeakSeconds": 411.2121041666667,
+      "sourceWindowSeconds": [
+        411.1471041666667,
+        411.4521041666667
+      ],
+      "originalPeakDB": -5.738198625848165,
+      "gainDB": -6.261801374151834,
+      "reason": "Isolated measured peak above -8 dBFS; physical sound identity unconfirmed"
+    }
+  ],
+  "events": [],
+  "subjectiveReview": "Pending; signal scan does not identify scraping/tools or certify absence of noise.",
+  "excluded": [
+    {
+      "start": 0,
+      "end": 20,
+      "reason": "User-identified scraping at approximately 13\u201314 seconds and safety tail"
+    },
+    {
+      "start": 516.0,
+      "end": 714.0,
+      "reason": "Long enough section selected; closer spectral match at 516 s; later loud peaks omitted"
+    }
+  ],
+  "outputSHA256": "c9a2b913085c02422eef97b67bf23e6be7112948e368dbc7afd820581ffcda01"
+}

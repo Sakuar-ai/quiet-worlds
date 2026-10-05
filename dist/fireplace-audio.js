@@ -1,114 +1,142 @@
-// One long, pre-crossfaded bed + short non-looping events from the same source.
-// No normalized excerpts, stacked continuous layers, synthesis or time stretching.
-const clamp = n => Math.max(0, Math.min(1, n));
+// Slider-selected natural regions. One steady bed, two ONLY during a transition.
+// No filters, event scheduling, normalization, synthesis or timeline-led intensity.
+const HALF_PI=Math.PI/2;
+const clamp=n=>Math.max(0,Math.min(1,n));
 
+export function selectFireRegion(intensity,previous=null) {
+  const i=clamp(intensity);
+  // Small hysteresis prevents chatter at 30%; 70–100% stays medium until a
+  // genuinely clean stronger source region has been approved by ear.
+  if(previous==='low')return i>.32?'medium':'low';
+  if(previous==='medium')return i<.28?'low':'medium';
+  return i<=.30?'low':'medium';
+}
 export function fireAudioParameters(intensity) {
-  const i=clamp(intensity),p=i*i*(3-2*i);
-  return {bedGain:.62+.12*p, highCut:2300+4000*p,
-    eventGain:.18+.20*p, minimumGap:2.8-1.95*p,
-    meanExtraGap:24*(1-p)**3+1.7,
-    mediumProbability:i<.65?0:.18*((i-.65)/.35)};
+  return {region:selectFireRegion(intensity),bedGain:1,transitionSeconds:4};
 }
-
-export function prepareFireRecording(context,original,manifest) {
-  const rate=original.sampleRate,fade=Math.round(manifest.crossfadeSeconds*rate),length=original.length-fade;
-  if(length<rate*28||fade<rate)throw Error('Fire recording is too short');
-  const bed=context.createBuffer(original.numberOfChannels,length,rate);
-  for(let ch=0;ch<bed.numberOfChannels;ch++){
-    const input=original.getChannelData(ch),out=bed.getChannelData(ch);
-    out.set(input.subarray(fade));
-    for(let n=0;n<fade;n++){
-      const blend=.5-.5*Math.cos(Math.PI*n/(fade-1)),at=length-fade+n;
-      out[at]=out[at]*(1-blend)+input[n]*blend;
-    }
-  }
-  const events=manifest.events.map((entry,id)=>{
-    const start=Math.round(entry.start*rate),length=Math.round(entry.duration*rate);
-    if(start<0||start+length>original.length)throw Error('Invalid fire event');
-    const buffer=context.createBuffer(original.numberOfChannels,length,rate);
-    for(let ch=0;ch<buffer.numberOfChannels;ch++){
-      const input=original.getChannelData(ch),out=buffer.getChannelData(ch);
-      for(let n=0;n<length;n++){
-        const attack=Math.min(1,n/(rate*.008)),release=Math.min(1,(length-1-n)/(rate*.07));
-        out[n]=input[start+n]*attack*release;
-      }
-    }
-    return {...entry,id,buffer};
+export function prepareFireRecording(context,buffers,manifest) {
+  if(manifest.regions?.length!==2 || manifest.transitionSeconds!==4)
+    throw Error('Expected two approved-reference fire regions');
+  const regions=new Map();
+  manifest.regions.forEach((region,index)=>{
+    const buffer=buffers[index];
+    const values=[region.loopStartSeconds,region.loopEndSeconds,region.cueOffsetSeconds];
+    if(!buffer || buffer.duration<40 || values.some(v=>!Number.isFinite(v)) ||
+      region.loopStartSeconds<0 || region.loopEndSeconds<=region.loopStartSeconds ||
+      region.loopEndSeconds>buffer.duration+.01 || region.cueOffsetSeconds<0 ||
+      region.cueOffsetSeconds>=region.loopEndSeconds)throw Error('Invalid Fireplace region');
+    regions.set(region.id,{...region,buffer});
   });
-  return {bed,events};
-}
-
-// Audio-clock renewal process: non-periodic exponential waits, a hard quiet gap,
-// no immediate/recent repeat, and no medium pops below 65%. No catch-up bursts.
-export class CracklePlanner {
-  constructor(random=Math.random){this.random=random;this.recent=[];}
-  next(intensity,events){
-    const p=fireAudioParameters(intensity),medium=this.random()<p.mediumProbability;
-    let choices=events.filter(e=>e.size===(medium?'medium':'small')&&!this.recent.includes(e.id));
-    if(!choices.length)choices=events.filter(e=>e.size===(medium?'medium':'small'));
-    const event=choices[Math.min(choices.length-1,Math.floor(this.random()*choices.length))];
-    this.recent=[...this.recent,event.id].slice(-3);
-    return {event,wait:p.minimumGap+Math.min(75,-Math.log(Math.max(.000001,1-this.random()))*p.meanExtraGap),
-      gain:p.eventGain*(.86+.28*this.random())};
-  }
+  if(!regions.has('low')||!regions.has('medium'))throw Error('Missing Fireplace region');
+  return {regions,transitionSeconds:4,initialFadeSeconds:manifest.initialFadeSeconds};
 }
 
 export class FireplaceAudio {
-  constructor(context,bus,recording,{random=Math.random,timers=globalThis}={}){
-    this.context=context;this.bus=bus;this.recording=recording;this.random=random;this.timers=timers;
-    this.planner=new CracklePlanner(random);this.voices=new Set();this.intensity=.42;this.plannedIntensity=.42;this.active=false;this.disposed=false;
-    this.source=context.createBufferSource();this.source.buffer=recording.bed;this.source.loop=true;
-    this.filter=context.createBiquadFilter();this.filter.type='lowpass';this.filter.Q.value=.5;
-    this.gain=context.createGain();this.gain.gain.value=0;
-    this.source.connect(this.filter).connect(this.gain).connect(bus);
-    this.source.start(0,random()*recording.bed.duration);
-    this.source.onended=()=>{this.source.disconnect();this.filter.disconnect();this.gain.disconnect();};
-    this.update(this.intensity);
+  constructor(context,bus,recording,{timers=globalThis}={}) {
+    this.context=context;this.recording=recording;this.timers=timers;
+    this.voices=new Map();this.offsets=new Map();this.intensity=.5;
+    this.desiredRegion=null;this.currentRegion=null;this.transition=null;
+    this.active=false;this.disposed=false;
+    this.gain=context.createGain();this.gain.gain.value=0;this.gain.connect(bus);
   }
-  update(intensity){
-    this.intensity=clamp(intensity);const p=fireAudioParameters(this.intensity),now=this.context.currentTime;
-    this.filter.frequency.setTargetAtTime(p.highCut,now,.65);
-    this.gain.gain.setTargetAtTime(p.bedGain,now,.65);
-    if(this.active&&Math.abs(this.plannedIntensity-this.intensity)>.025){
-      this.plannedIntensity=this.intensity;
-      // Re-plan future events when moving the slider; do not leave loud pops
-      // queued after returning to Embers. Never interrupt a currently sounding event.
-      for(const voice of [...this.voices])if(voice.at>now+.02){voice.source.stop();voice.source.disconnect();voice.gain.disconnect();this.voices.delete(voice);}
-      this.nextAt=Math.max(now+.15,...[...this.voices].map(v=>v.end));this.pending=null;
-      this.pump();
+  createVoice(id,level) {
+    if(this.voices.has(id))return this.voices.get(id);
+    if(this.voices.size>=2)throw Error('Fireplace overlap limit exceeded');
+    const region=this.recording.regions.get(id),now=this.context.currentTime;
+    const source=this.context.createBufferSource(),gain=this.context.createGain();
+    source.buffer=region.buffer;source.loop=true;
+    source.loopStart=region.loopStartSeconds;source.loopEnd=region.loopEndSeconds;
+    gain.gain.value=level;source.connect(gain).connect(this.gain);
+    const offset=this.offsets.get(id)??region.cueOffsetSeconds;
+    const voice={id,source,gain,region,startedAt:now,offset};
+    source.onended=()=>{source.disconnect();gain.disconnect();};
+    source.start(now,offset);this.voices.set(id,voice);return voice;
+  }
+  retire(id,when=this.context.currentTime) {
+    const voice=this.voices.get(id);if(!voice)return;
+    const {region,offset,startedAt}=voice;
+    let position=offset+Math.max(0,when-startedAt);
+    if(position>=region.loopEndSeconds)position=region.loopStartSeconds+
+      (position-region.loopEndSeconds)%(region.loopEndSeconds-region.loopStartSeconds);
+    this.offsets.set(id,position);this.voices.delete(id);voice.source.stop(when);
+  }
+  angleAt(now=this.context.currentTime) {
+    if(!this.transition)return this.currentRegion==='medium'?HALF_PI:0;
+    const t=this.transition,p=clamp((now-t.start)/(t.end-t.start));
+    return t.from+(t.to-t.from)*p;
+  }
+  settle() {
+    const t=this.transition,now=this.context.currentTime;
+    if(!t||now<t.end-1e-6)return;
+    this.timers.clearTimeout(this.timer);this.currentRegion=t.target;this.transition=null;
+    const outgoing=t.target==='low'?'medium':'low';this.retire(outgoing);
+    this.voices.get(t.target)?.gain.gain.setValueAtTime(1,now);
+  }
+  scheduleSettlement() {
+    this.timers.clearTimeout(this.timer);
+    if(!this.transition||this.disposed)return;
+    const wait=Math.max(20,(this.transition.end-this.context.currentTime)*1000+8);
+    this.timer=this.timers.setTimeout(()=>{
+      if(this.disposed)return;
+      this.settle();
+      // Wall-clock timers can fire while AudioContext is suspended. Never retire
+      // a source before its AUDIO-clock gain ramp actually finishes.
+      if(this.transition)this.scheduleSettlement();
+    },wait);
+  }
+  transitionTo(target) {
+    this.settle();
+    if(!this.transition&&this.currentRegion===target)return;
+    const now=this.context.currentTime,from=this.angleAt(now),to=target==='medium'?HALF_PI:0;
+    const duration=this.recording.transitionSeconds;
+    // A rapid reversal retargets the SAME adjacent pair at its current angle.
+    // It cannot start a third source or queue a later unwanted region change.
+    for(const id of ['low','medium']){
+      const isLow=id==='low',voice=this.createVoice(id,isLow?Math.cos(from):Math.sin(from));
+      const curve=new Float32Array(257);
+      for(let n=0;n<curve.length;n++){
+        const angle=from+(to-from)*n/(curve.length-1);
+        curve[n]=isLow?Math.cos(angle):Math.sin(angle);
+      }
+      const param=voice.gain.gain;
+      param.cancelAndHoldAtTime(now);
+      param.setValueCurveAtTime(curve,now,duration);
     }
+    this.transition={from,to,start:now,end:now+duration,target};this.scheduleSettlement();
   }
-  play(){
+  update(intensity) {
+    this.intensity=clamp(intensity);this.settle();
+    const desired=selectFireRegion(this.intensity,this.desiredRegion);
+    if(desired===this.desiredRegion)return;
+    this.desiredRegion=desired;
+    if(this.active)this.transitionTo(desired);
+  }
+  play() {
     if(this.disposed||this.active)return;
-    this.active=true;this.plannedIntensity=this.intensity;this.nextAt=this.context.currentTime+.15;this.pending=null;
-    this.pump();this.timer=this.timers.setInterval(()=>this.pump(),1000);
-  }
-  pump(){
-    if(!this.active||this.disposed)return;
-    const now=this.context.currentTime,horizon=now+8;
-    // A suspended context/tab can resume much later: skip missed events entirely.
-    if((this.pending?.at??this.nextAt)<now){this.nextAt=now+.15;this.pending=null;}
-    for(let n=0;n<12;n++){
-      if(!this.pending){const choice=this.planner.next(this.intensity,this.recording.events);this.pending={...choice,at:this.nextAt+choice.wait};}
-      if(this.pending.at>horizon)break;
-      const {event,at,gain:level}=this.pending,source=this.context.createBufferSource(),gain=this.context.createGain();
-      source.buffer=event.buffer;source.loop=false;gain.gain.value=level;
-      source.connect(gain).connect(this.bus);
-      const voice={source,gain,at,end:at+event.buffer.duration,id:event.id};this.voices.add(voice);
-      source.onended=()=>{source.disconnect();gain.disconnect();this.voices.delete(voice);};
-      source.start(at);source.stop(voice.end+.005);
-      this.nextAt=voice.end;this.pending=null;
+    this.settle();this.active=true;
+    this.desiredRegion=selectFireRegion(this.intensity,this.desiredRegion);
+    if(!this.voices.size){
+      this.currentRegion=this.desiredRegion;this.createVoice(this.currentRegion,1);
+    }else if(this.transition?.target!==this.desiredRegion&&this.currentRegion!==this.desiredRegion){
+      this.transitionTo(this.desiredRegion);
+    }else if(this.transition&&this.transition.target!==this.desiredRegion){
+      this.transitionTo(this.desiredRegion);
     }
+    const now=this.context.currentTime;
+    this.gain.gain.cancelAndHoldAtTime(now);
+    this.gain.gain.linearRampToValueAtTime(1,now+this.recording.initialFadeSeconds);
   }
-  pause(){
-    this.active=false;this.timers.clearInterval(this.timer);this.pending=null;
-    for(const voice of [...this.voices]){
-      voice.gain.gain.setTargetAtTime(0,this.context.currentTime,.02);
-      voice.source.stop(this.context.currentTime+.1);
-    }
-    this.voices.clear();
+  pause() {
+    if(this.disposed)return;
+    this.active=false;const now=this.context.currentTime;
+    this.gain.gain.cancelAndHoldAtTime(now);this.gain.gain.linearRampToValueAtTime(0,now+.15);
+    // Keep at most the existing pair until its scheduled transition settles.
+    // Rapid pause/resume never starts additional copies or restarts the clip.
   }
-  dispose(){
-    if(this.disposed)return;this.pause();this.disposed=true;this.source.stop(this.context.currentTime+.2);
+  dispose() {
+    if(this.disposed)return;
+    this.pause();this.disposed=true;this.timers.clearTimeout(this.timer);this.transition=null;
+    for(const id of [...this.voices.keys()])this.retire(id,this.context.currentTime+.2);
+    this.timers.setTimeout(()=>this.gain.disconnect(),250);
   }
 }

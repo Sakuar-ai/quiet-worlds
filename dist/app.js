@@ -1,5 +1,5 @@
 import { FireplaceRenderer } from './fireplace.js?v=phase2a-12';
-import { FireplaceAudio, prepareFireRecording } from './fireplace-audio.js?v=audio-13';
+import { FireplaceAudio, prepareFireRecording } from './fireplace-audio.js?v=fireplace-14';
 import { worldArt, FIRE_MARK } from './world-art.js?v=phase2a-2';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
@@ -36,7 +36,7 @@ const SCENES = {
     descriptions: ["A few embers are breathing.", "The fire is gently unfolding.", "The logs are speaking brightly."],
     aria: "A simple hand-drawn brick fireplace with small moving flames",
     audio: [
-      { label: "single natural fire bed with sparse crackle events", kind: "fireplace", url: "./audio/fireplace-kingsrow-v1.flac", manifest: "./audio/fireplace-kingsrow-v1.json" }
+      { label: "slider-selected natural fireplace regions", kind: "fireplace", manifest: "./audio/fireplace-visionear-regions-v2.json" }
     ]
   },
   forest: {
@@ -332,6 +332,7 @@ class AudioMixer {
     }
     if(request!==this.request) return false;
     this.master.gain.setTargetAtTime(.54, this.context.currentTime, .18);
+    this.fireMaster.gain.setTargetAtTime(1, this.context.currentTime, .18);
     this.isPlaying = true;
     this.update(scene.intensity);
     this.fireAudio?.play();
@@ -344,6 +345,7 @@ class AudioMixer {
     this.fireAudio?.pause();
     if (!this.context) return;
     this.master.gain.setTargetAtTime(0, this.context.currentTime, .12);
+    this.fireMaster.gain.setTargetAtTime(0, this.context.currentTime, .12);
   }
 
   createContext() {
@@ -353,6 +355,10 @@ class AudioMixer {
     const limiter=this.context.createDynamicsCompressor();
     limiter.threshold.value=-6;limiter.knee.value=6;limiter.ratio.value=8;limiter.attack.value=.015;limiter.release.value=.25;
     this.master.connect(limiter).connect(this.context.destination);
+    // Fireplace reference path: unity playback, no compressor or tonal processing.
+    // Other scenes retain their existing master and safety limiter unchanged.
+    this.fireMaster=this.context.createGain();this.fireMaster.gain.value=0;
+    this.fireMaster.connect(this.context.destination);
   }
 
   buildScene(config, buffers=[]) {
@@ -361,11 +367,12 @@ class AudioMixer {
     if (oldBus) { oldBus.gain.setTargetAtTime(0, this.context.currentTime, .12); setTimeout(() => oldBus.disconnect(), 2200); }
     this.fireAudio?.dispose();this.fireAudio=null;
     this.layers.filter(layer=>!layer.fireBed).forEach(({ source }) => source.stop(this.context.currentTime + 2));
-    this.sceneBus = this.context.createGain(); this.sceneBus.gain.value = 0; this.sceneBus.connect(this.master);
+    this.sceneBus = this.context.createGain(); this.sceneBus.gain.value = 0;
+    this.sceneBus.connect(config.id==='fireplace'?this.fireMaster:this.master);
     this.layers = config.audio.map((layer,index) => {
       if(layer.kind==='fireplace'){
         this.fireAudio=new FireplaceAudio(this.context,this.sceneBus,buffers[index]);
-        return {source:this.fireAudio.source,gain:this.fireAudio.gain,fireBed:true};
+        return {gain:this.fireAudio.gain,fireBed:true};
       }
       return layer.kind==="recording"?this.createRecordingLayer(layer,buffers[index]):this.createNoiseLayer(layer);
     });
@@ -415,11 +422,20 @@ class AudioMixer {
   }
 
   async loadFireRecording(layer) {
-    if(!this.buffers.has(layer.url)){
-      const loading=Promise.all([fetch(layer.url).then(r=>{if(!r.ok)throw Error('Fire recording could not load');return r.arrayBuffer();}).then(b=>this.context.decodeAudioData(b)),fetch(layer.manifest).then(r=>{if(!r.ok)throw Error('Fire event data could not load');return r.json();})]).then(([original,manifest])=>prepareFireRecording(this.context,original,manifest));
-      this.buffers.set(layer.url,loading);loading.catch(()=>this.buffers.delete(layer.url));
+    const key=layer.manifest;
+    if(!this.buffers.has(key)){
+      const loading=(async()=>{
+        const response=await fetch(key);if(!response.ok)throw Error('Fire region metadata could not load');
+        const manifest=await response.json();
+        const buffers=await Promise.all(manifest.regions.map(async region=>{
+          const response=await fetch(region.url);if(!response.ok)throw Error('Fire region could not load');
+          return this.context.decodeAudioData(await response.arrayBuffer());
+        }));
+        return prepareFireRecording(this.context,buffers,manifest);
+      })();
+      this.buffers.set(key,loading);loading.catch(()=>this.buffers.delete(key));
     }
-    return this.buffers.get(layer.url);
+    return this.buffers.get(key);
   }
 
   createRecordingLayer(layer,buffer) {

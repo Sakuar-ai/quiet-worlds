@@ -1,0 +1,52 @@
+{
+  "version": "fireplace-14",
+  "reviewStatus": "APPROVED",
+  "approval": "User accepted the 7:40 low-fire revision and explicitly authorized GitHub publication on 2026-10-06.",
+  "originalSourceSHA256": "3cd3ff55829222efc4d15096309afa1ea4412ad5c9fa518909bc1b3ca8af4c59",
+  "approvedBedSHA256": "c9a2b913085c02422eef97b67bf23e6be7112948e368dbc7afd820581ffcda01",
+  "sourceSonicApproval": true,
+  "sourceURL": "https://freesound.org/people/visionear/sounds/501417/",
+  "author": "visionear",
+  "license": "CC0-1.0",
+  "transitionSeconds": 4,
+  "initialFadeSeconds": 0.35,
+  "regionBoundary": 0.3,
+  "hysteresis": 0.02,
+  "highRegionAvailable": false,
+  "highRangeBehavior": "Use medium; no verified clean stronger region",
+  "regions": [
+    {
+      "id": "low",
+      "url": "./audio/fireplace-visionear-low-v2.flac",
+      "sourceStartSeconds": 460,
+      "sourceEndSeconds": 500,
+      "durationSeconds": 40,
+      "loopStartSeconds": 4,
+      "loopEndSeconds": 40,
+      "cueOffsetSeconds": 0,
+      "loopCrossfadeSeconds": 4,
+      "gain": 1,
+      "sha256": "30a6077a2eef325fad3d5f991dca9363b04ebfce0224266a223768edc02d1337",
+      "approvedInteriorFloat32LE_SHA256": "652c38c36139af86408d40f3c4529f3a6bc12ce552477ba8e00e853b2c09b67a",
+      "selectionBasis": "User identified original 7:40 as low-fire reference and accepted the 7:40\u20138:20 revision"
+    },
+    {
+      "id": "medium",
+      "url": "./audio/fireplace-visionear-medium-v1.flac",
+      "sourceStartSeconds": 40,
+      "sourceEndSeconds": 120,
+      "durationSeconds": 80,
+      "loopStartSeconds": 4,
+      "loopEndSeconds": 80,
+      "cueOffsetSeconds": 20,
+      "loopCrossfadeSeconds": 4,
+      "gain": 1,
+      "sha256": "db92c1af1a0622a081f288b587daad3e8da2ccadb6b6d142c8e8a26791d5d028",
+      "approvedInteriorFloat32LE_SHA256": "5744eed29b140ab5fe4c6dfacbe4aa88e1b3bcc1f7b9fb8b73e7f7331eb176b9",
+      "selectionBasis": "User identified original ~60 s as preferred medium"
+    }
+  ],
+  "deliveryGainDB": 0,
+  "events": [],
+  "scope": "Approved natural low and medium regions; no independent high-fire region; medium unchanged"
+}

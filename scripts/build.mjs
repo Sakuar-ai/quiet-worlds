@@ -16,7 +16,13 @@ const app=readFileSync('dist/app.js','utf8');
 for(const [,path] of app.matchAll(/url: "\.\/([^"]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing audio: ${path}`);
 assert.ok(!app.includes('soft-fire')&&!app.includes('fireMix('),'retire the three normalized Fireplace excerpts');
 const fireAudio=readFileSync('dist/fireplace-audio.js','utf8');
-assert.equal((fireAudio.match(/\.loop=true/g)||[]).length,1,'exactly one continuous bed implementation');
+assert.equal((fireAudio.match(/\.loop=true/g)||[]).length,1,'shared region-source implementation');
+assert.ok(!/CracklePlanner|setInterval|createBiquadFilter|createDynamicsCompressor/.test(fireAudio),'no extra crackles, filtering, or compressor in the Fireplace engine');
+const fireManifest=JSON.parse(readFileSync('dist/audio/fireplace-visionear-regions-v2.json'));
+assert.equal(fireManifest.events.length,0);assert.equal(fireManifest.deliveryGainDB,0);
+assert.equal(fireManifest.transitionSeconds,4);assert.equal(fireManifest.highRegionAvailable,false);
+assert.deepEqual(fireManifest.regions.map(r=>r.id),['low','medium']);
+for(const r of fireManifest.regions){assert.ok(r.durationSeconds>=40);assert.ok(existsSync('dist/'+r.url.replace('./','')));}
 const fire=readFileSync('dist/fireplace.js','utf8');
 for(const [,path] of fire.matchAll(/href="\.\/([^"?#]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing fireplace asset: ${path}`);
 for(const layer of ['fire-environment','firelight-field','firelight-hearth','fire-structure','fire-glow','fire-coal-bed','fire-lower-flames','fire-flames','fire-log-interleave','fire-logs','fire-log-heat','fire-seam-embers','fire-embers','fire-sparks']) assert.ok(fire.includes(layer),`Missing independent layer: ${layer}`);

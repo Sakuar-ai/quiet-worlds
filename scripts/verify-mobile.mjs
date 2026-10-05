@@ -11,7 +11,7 @@ const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{enc
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
 // Only Fireplace audio configuration/backend/imports change in this pass.
-const visualApp=source=>source.replace(/^import .*;\n/gm,'').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
+const visualApp=source=>source.replace(/^import .*;\n/gm,'').replace(/(id: "fireplace"[^\n]*initialIntensity:) [\d.]+/,'$1 .42').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed|one long natural fireplace recording|slider-selected natural fireplace regions)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
 assert.equal(visualApp(app),visualApp(oldApp));
 assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
 const artPath='dist/art/fireplace-reference-v6.png';
