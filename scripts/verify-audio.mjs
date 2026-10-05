@@ -43,14 +43,19 @@ const dir=resolve('dist'),server=createServer((req,res)=>{try{const path=resolve
 await new Promise(done=>server.listen(0,'127.0.0.1',done));
 const browser=await chromium.launch({headless:true});
 try{
-  const page=await browser.newPage();
+  const page=await browser.newPage(),pageErrors=[];
+  page.on('pageerror',error=>pageErrors.push(error.message));
   await page.addInitScript(()=>{window.requestAnimationFrame=()=>1;window.cancelAnimationFrame=()=>{};});
   await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:readFileSync('dist/app.js','utf8')+'\nwindow.__audioQA={mixer,setScene,pause,timer};'}));
   await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
-  await page.waitForFunction(()=>window.__audioQA);
+  await page.waitForFunction(()=>window.__audioQA,null,{polling:100});
   await page.locator('#scene-trigger').click();await page.locator('[data-world="fireplace"]').click();
   await page.locator('#play-trigger').click();
-  await page.waitForFunction(()=>window.__audioQA.mixer.isPlaying&&window.__audioQA.mixer.fireAudio);
+  // Animation frames are frozen for stable UI tests; audio decoding is async.
+  // Poll on a timer, not Playwright's default requestAnimationFrame callback.
+  try{await page.waitForFunction(()=>window.__audioQA.mixer.isPlaying&&window.__audioQA.mixer.fireAudio,null,{polling:100});}
+  catch(error){console.error('Playback diagnostic',await page.evaluate(()=>({status:document.querySelector('#intensity-description').textContent,context:window.__audioQA.mixer.context?.state,playing:window.__audioQA.mixer.isPlaying,scene:window.__audioQA.mixer.currentScene})),pageErrors);throw error;}
+  assert.deepEqual(pageErrors,[]);
   const integration=await page.evaluate(()=>{
     const q=window.__audioQA,m=q.mixer,bed=m.fireAudio.source,slider=document.querySelector('#intensity-slider'),samples=[];
     for(const i of [0,.5,1,0]){slider.value=String(i*1000);slider.dispatchEvent(new Event('input'));samples.push({intensity:m.fireAudio.intensity,layers:m.layers.length,sameBed:m.fireAudio.source===bed,loop:m.fireAudio.source.loop,nonLoopEvents:[...m.fireAudio.voices].every(v=>!v.source.loop)});}
