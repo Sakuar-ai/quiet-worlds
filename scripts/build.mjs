@@ -12,6 +12,8 @@ const html=readFileSync('dist/index.html','utf8');
 const settings=html.split('id="settings-sheet"')[1].split('</section>')[0];
 assert.ok(!/sound-credit|freesound|creativecommons/.test(settings),'Full audio credits must never appear in Gentle settings');
 assert.equal((settings.match(/id="credits-trigger"/g)||[]).length,1,'One centralized credits entry');
+assert.ok(!/timer/i.test(settings),'Gentle settings must not duplicate the timer');
+assert.equal((html.match(/aria-controls="timer-sheet"/g)||[]).length,1,'Top-right Timer is the only timer entry point');
 assert.ok(html.includes('id="credits-sheet"'),'Dedicated sound credits surface');
 for(const [,path] of html.matchAll(/(?:src|href)="\.\/([^"?]+)(?:\?[^"]*)?"/g)) {
   assert.ok(existsSync('dist/'+path),`Missing entry asset: ${path}`);

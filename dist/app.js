@@ -592,7 +592,6 @@ async function releaseWakeLock(){ if(wakeLock){ await wakeLock.release(); wakeLo
 
 $("#scene-trigger").addEventListener("click",()=>openSheet("scene-sheet",$("#scene-trigger")));
 $("#settings-trigger").addEventListener("click",()=>openSheet("settings-sheet",$("#settings-trigger")));
-$("#settings-timer-trigger").addEventListener("click",()=>openSheet("timer-sheet",$("#settings-trigger")));
 $("#credits-trigger").addEventListener("click",()=>{
   openSheet("credits-sheet",$("#settings-trigger"));
   $("#credits-trigger").setAttribute("aria-expanded","true");

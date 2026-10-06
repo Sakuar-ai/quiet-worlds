@@ -1,8 +1,8 @@
 # Quiet Worlds
 
-## Settings / credits presentation — settings-15
+## Settings / credits presentation — settings-16
 
-Gentle settings contains user controls only (Timer, slow movement, keep screen awake) plus one quiet **Sound credits & licenses** navigation row. That secondary sheet is the single in-app attribution surface, grouped by Rain, Fireplace, Forest, Ocean, Snow and future Cat. Add new external audio credits only there (`#credits-sheet` in `dist/index.html`) and retain provenance in `dist/audio/CREDITS.md`; never add source paragraphs to the main settings panel. Worlds without external recordings have only a short status note. Back returns to settings; dismiss returns focus to its visible opener. Audio, world visuals and intensity interaction are unchanged.
+Gentle settings contains unique preferences only (slow movement, keep screen awake) plus one quiet **Sound credits & licenses** navigation row. The top-right Timer is the only timer entry point; do not duplicate primary controls in settings. That secondary credits sheet is the single in-app attribution surface, grouped by Rain, Fireplace, Forest, Ocean, Snow and future Cat. Add new external audio credits only there (`#credits-sheet` in `dist/index.html`) and retain provenance in `dist/audio/CREDITS.md`; never add source paragraphs to the main settings panel. Worlds without external recordings have only a short status note. Back returns to settings; dismiss returns focus to its visible opener. Timer functionality, audio, world visuals and intensity interaction are unchanged.
 
 当前版本为 **fireplace-14（visionear-regions-2）**。用户已确认原录音 7:40 附近的低火修订，并于 2026-10-06 明确授权发布。清单 `reviewStatus: APPROVED`；后续声音改动须重新经过试听确认。本版替换旧 audio-13 壁炉音频。
 

@@ -148,7 +148,6 @@ button { color: inherit; }
 .settings-panel { max-height: 85svh; overflow-y: auto; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
 .sound-credit { margin: 0; font: .78rem/1.65 ui-rounded, system-ui, sans-serif; color: #596671; overflow-wrap: anywhere; }
 .sound-credit a { color: inherit; text-underline-offset: 3px; }
-.setting-navigation { width: 100%; border: 0; background: transparent; color: inherit; text-align: left; }
 .credits-navigation { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 48px; margin-top: 12px; padding: 12px 5px; border: 0; border-top: 1px solid #e4e7e9; background: transparent; color: #737d85; font: .78rem/1.5 ui-rounded, system-ui, sans-serif; text-align: left; cursor: pointer; }
 .credits-panel { display: flex; flex-direction: column; max-height: 85svh; border-color: #c9ccd1; }
 .credits-back { flex-shrink: 0; align-self: flex-start; min-height: 44px; padding: 0 5px; border: 0; background: transparent; color: #737d85; font: .78rem/1.5 ui-rounded, system-ui, sans-serif; cursor: pointer; }

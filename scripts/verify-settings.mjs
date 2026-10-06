@@ -19,7 +19,7 @@ try{
     const page=await browser.newPage({viewport,isMobile:true,hasTouch:true,deviceScaleFactor:1});
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:readFileSync('dist/app.js','utf8')+`
-      window.__settingsQA={calls:0};
+      window.__settingsQA={calls:0,timer};
       for(const method of ['play','pause','update']){const original=mixer[method].bind(mixer);mixer[method]=(...args)=>{window.__settingsQA.calls++;return original(...args);};}
     `}));
     await page.goto(`http://127.0.0.1:${server.address().port}`);
@@ -28,12 +28,15 @@ try{
     await page.locator('#settings-trigger').click();
     assert.equal(await page.locator('#settings-sheet a').count(),0,'no source/license links in primary settings');
     assert.equal(await page.locator('#settings-sheet .sound-credit').count(),0,'no attribution paragraphs in primary settings');
-    assert.equal(await page.locator('#settings-sheet button').count(),3,'scrim, Timer and one credits entry only');
+    assert.equal(await page.locator('#settings-sheet button').count(),2,'scrim and one credits entry only');
+    assert.ok(!/timer/i.test(await page.locator('#settings-sheet').textContent()),'no duplicate timer in settings');
+    assert.equal(await page.locator('[aria-controls="timer-sheet"]').count(),1,'only one timer entry');
+    assert.equal(await page.locator('[aria-controls="timer-sheet"]').getAttribute('id'),'timer-trigger');
     assert.equal(await page.locator('#settings-sheet input').count(),2,'actual preferences remain');
     await page.locator('#motion-toggle').check();
     await page.locator('#keep-awake-toggle').check();
     const height=(await page.locator('.settings-panel').boundingBox()).height;
-    assert.ok(height<410&&height<=viewport.height*.85,'compact primary settings');
+    assert.ok(height<315&&height<=viewport.height*.85,'compact preferences without a Timer row');
     const initialIntensity=await page.locator('#intensity-slider').inputValue();
     await page.screenshot({path:`test-results/settings/${viewport.width}-settings.png`});
     await page.locator('#credits-trigger').click();
@@ -70,11 +73,18 @@ try{
     await page.locator('#credits-sheet .scrim').click({position:{x:8,y:8}});
     assert.equal(await page.locator('.sheet:not([hidden])').count(),0);
     assert.ok(await page.locator('#settings-trigger').evaluate(e=>e===document.activeElement));
-    await page.locator('#settings-trigger').click();await page.locator('#settings-timer-trigger').click();
-    await page.locator('[data-minutes="10"]').click();
-    assert.equal(await page.locator('#timer-label').textContent(),'10 min');
+    for(const minutes of [5,10,15,30]){
+      await page.locator('#timer-trigger').click();
+      await page.locator(`[data-minutes="${minutes}"]`).click();
+      assert.equal(await page.locator('#timer-label').textContent(),`${minutes} min`);
+      assert.ok(await page.locator('#timer-trigger').evaluate(e=>e===document.activeElement));
+    }
     await page.locator('#timer-trigger').click();await page.locator('#custom-minutes').fill('7');
     await page.locator('#custom-timer-form button').click();assert.equal(await page.locator('#timer-label').textContent(),'7 min');
+    await page.evaluate(()=>{const t=window.__settingsQA.timer;t.setActive(true);t.tick(t.last+1000);t.setActive(false);});
+    assert.equal(await page.locator('#timer-label').textContent(),'6:59','existing countdown still advances');
+    await page.locator('#timer-trigger').click();await page.locator('#timer-off').click();
+    assert.equal(await page.locator('#timer-label').textContent(),'no timer');
     await page.locator('#scene-trigger').click();await page.locator('[data-world="fireplace"]').click();
     await page.locator('#settings-trigger').click();
     assert.equal((await page.locator('.settings-panel').boundingBox()).height,height,'same compact panel in every world');

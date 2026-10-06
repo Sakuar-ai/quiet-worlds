@@ -14,7 +14,7 @@ const app=readFileSync('dist/app.js','utf8');
 // covered by verify-settings; legacy audio allowances remain as before.
 const withoutCreditsNavigation=source=>source
   .replace(/^  \$\('#fireplace-credit'\).*\n/m,'')
-  .replace(/\$\("#settings-timer-trigger"\)[\s\S]*?(?=document.querySelectorAll\("\[data-close-sheet\]"\))/,'')
+  .replace(/\$\("#credits-trigger"\)[\s\S]*?(?=document.querySelectorAll\("\[data-close-sheet\]"\))/,'')
   .replace('if(event.key==="Escape") { if(!$("#credits-sheet").hidden) backToSettings(); else closeSheets(); }','if(event.key==="Escape") closeSheets();');
 const visualApp=source=>withoutCreditsNavigation(source).replace(/^import .*;\n/gm,'').replace(/(id: "fireplace"[^\n]*initialIntensity:) [\d.]+/,'$1 .42').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed|one long natural fireplace recording|slider-selected natural fireplace regions)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
 assert.equal(visualApp(app),visualApp(oldApp));
