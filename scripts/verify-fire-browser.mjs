@@ -16,15 +16,30 @@ await new Promise(done=>server.listen(0,'127.0.0.1',done));
 const browser=await chromium.launch({headless:true,args:['--mute-audio']});
 try{
   const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
-  const errors=[],requests=[];
+  const errors=[],requests=[],consoleMessages=[];
+  page.on('console',m=>consoleMessages.push({type:m.type(),text:m.text()}));
   page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.url().includes('/audio/'))requests.push(r.url());});
   await page.addInitScript(()=>{window.requestAnimationFrame=()=>1;window.cancelAnimationFrame=()=>{};});
-  await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:app+'\nwindow.__fireQA={mixer,setScene,pause};'}));
+  await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:app+'\nwindow.__fireQA={mixer,setScene,pause}; const qaPlay=mixer.play.bind(mixer); mixer.play=async(...args)=>{try{return await qaPlay(...args);}catch(e){console.error("Fire playback exception:",e.stack||String(e));throw e;}};'}));
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   await page.waitForFunction(()=>window.__fireQA,null,{polling:100});
   await page.locator('#scene-trigger').click();await page.locator('[data-world="fireplace"]').click();
   await page.locator('#play-trigger').click();
-  await page.waitForFunction(()=>window.__fireQA.mixer.isPlaying&&window.__fireQA.mixer.fireAudio?.active,null,{polling:100,timeout:60000});
+  try{await page.waitForFunction(()=>window.__fireQA.mixer.isPlaying&&window.__fireQA.mixer.fireAudio?.active,null,{polling:100,timeout:20000});}
+  catch(error){
+    const diagnostic=await page.evaluate(async()=>{
+      const m=window.__fireQA.mixer;
+      const result={context:m.context?.state,rate:m.context?.sampleRate,playing:m.isPlaying,scene:m.currentScene,
+        text:document.querySelector('#intensity-description')?.textContent,fireActive:m.fireAudio?.active};
+      try{const metadata=await(await fetch('./audio/fireplace-visionear-regions-v2.json')).json();
+        result.buffers=[];
+        for(const r of metadata.regions){const b=await m.context.decodeAudioData(await(await fetch(r.url)).arrayBuffer());result.buffers.push({id:r.id,duration:b.duration,length:b.length,rate:b.sampleRate});}
+      }catch(e){result.decodeError=String(e);}
+      return result;
+    });
+    mkdirSync('test-results',{recursive:true});writeFileSync('test-results/browser-fire-failure.json',JSON.stringify({diagnostic,errors,consoleMessages,requests},null,2));
+    console.error('Browser playback diagnostic:',JSON.stringify({diagnostic,errors,consoleMessages,requests}));throw error;
+  }
   const state=()=>page.evaluate(()=>{const f=window.__fireQA.mixer.fireAudio;return {region:f.currentRegion,desired:f.desiredRegion,voices:[...f.voices.keys()],active:f.active,transition:!!f.transition};});
   const initial=await state();assert.equal(initial.region,'medium');assert.deepEqual(initial.voices,['medium']);
   const slider=async value=>page.locator('#intensity-slider').evaluate((e,value)=>{e.value=String(value);e.dispatchEvent(new Event('input'));},value);
