@@ -10,10 +10,16 @@ const baseline='bf2aa8501f834233dd4d7ad0eaea9bd276019546';
 const previous=name=>execFileSync('git',['show',`${baseline}:dist/${name}`],{encoding:'utf8'});
 const oldApp=previous('app.js'),oldCss=previous('styles.css');
 const app=readFileSync('dist/app.js','utf8');
-// Only Fireplace audio configuration/backend/imports change in this pass.
-const visualApp=source=>source.replace(/^import .*;\n/gm,'').replace(/(id: "fireplace"[^\n]*initialIntensity:) [\d.]+/,'$1 .42').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed|one long natural fireplace recording|slider-selected natural fireplace regions)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
+// Keep the approved listening view frozen. Settings navigation is separately
+// covered by verify-settings; legacy audio allowances remain as before.
+const withoutCreditsNavigation=source=>source
+  .replace(/^  \$\('#fireplace-credit'\).*\n/m,'')
+  .replace(/\$\("#settings-timer-trigger"\)[\s\S]*?(?=document.querySelectorAll\("\[data-close-sheet\]"\))/,'')
+  .replace('if(event.key==="Escape") { if(!$("#credits-sheet").hidden) backToSettings(); else closeSheets(); }','if(event.key==="Escape") closeSheets();');
+const visualApp=source=>withoutCreditsNavigation(source).replace(/^import .*;\n/gm,'').replace(/(id: "fireplace"[^\n]*initialIntensity:) [\d.]+/,'$1 .42').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed|one long natural fireplace recording|slider-selected natural fireplace regions)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
 assert.equal(visualApp(app),visualApp(oldApp));
-assert.equal(readFileSync('dist/styles.css','utf8'),oldCss);
+const listeningStyles=source=>source.split('\n').filter(line=>!/^\.(?:settings-panel|sound-credit|setting-navigation|credits-navigation|credits-panel|credits-back|credits-worlds|credit-world|credit-note)(?:[ .:{+]|$)/.test(line)).join('\n');
+assert.equal(listeningStyles(readFileSync('dist/styles.css','utf8')),listeningStyles(oldCss),'all styles outside settings/credits remain byte-identical');
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
 assert.equal(readFileSync('dist/world-art.js','utf8'),previous('world-art.js'));
