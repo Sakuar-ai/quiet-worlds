@@ -14,6 +14,15 @@ assert.equal(manifest.regions[0].sourceEndSeconds,500);
 assert.equal(manifest.regions[1].sha256,'db92c1af1a0622a081f288b587daad3e8da2ccadb6b6d142c8e8a26791d5d028','approved medium is unchanged');
 const fileFetch=async url=>{const b=readFileSync(resolve('dist',url));return {ok:true,json:async()=>JSON.parse(b),arrayBuffer:async()=>b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength)};};
 const timers={setTimeout(){return 1;},clearTimeout(){}};
+// Chromium decodes these exact FLACs at 44.1 kHz with one fewer output sample.
+// Accept that rounding only; reject a genuinely truncated recording.
+for(const sampleRate of [44100,48000]){
+  const buffers=manifest.regions.map(r=>({sampleRate,duration:r.durationSeconds-1/sampleRate}));
+  const prepared=prepareFireRecording({sampleRate},buffers,manifest);
+  assert.equal(prepared.regions.get('low').loopEndSeconds,buffers[0].duration);
+  assert.equal(prepared.regions.get('medium').loopEndSeconds,buffers[1].duration);
+  assert.throws(()=>prepareFireRecording({sampleRate},[{sampleRate,duration:39.5},buffers[1]],manifest),/Invalid Fireplace region/);
+}
 assert.equal(selectFireRegion(.42),'medium');assert.equal(selectFireRegion(.5),'medium');
 assert.equal(selectFireRegion(1),'medium');assert.equal(selectFireRegion(0),'low');
 assert.equal(selectFireRegion(.31,'low'),'low');assert.equal(selectFireRegion(.29,'medium'),'medium');

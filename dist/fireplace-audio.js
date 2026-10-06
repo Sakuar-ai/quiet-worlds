@@ -20,12 +20,17 @@ export function prepareFireRecording(context,buffers,manifest) {
   const regions=new Map();
   manifest.regions.forEach((region,index)=>{
     const buffer=buffers[index];
-    const values=[region.loopStartSeconds,region.loopEndSeconds,region.cueOffsetSeconds];
-    if(!buffer || buffer.duration<40 || values.some(v=>!Number.isFinite(v)) ||
+    // Browser resampling (e.g. 48 kHz FLAC -> 44.1 kHz device) can round the
+    // decoded duration down by one sample. Validate metadata with sample-sized
+    // tolerance, then use the real buffer endpoint rather than rejecting it.
+    const tolerance=2/(buffer?.sampleRate||context.sampleRate||48000);
+    const values=[region.durationSeconds,region.loopStartSeconds,region.loopEndSeconds,region.cueOffsetSeconds];
+    if(!buffer || values.some(v=>!Number.isFinite(v)) || region.durationSeconds<40 ||
+      Math.abs(buffer.duration-region.durationSeconds)>tolerance ||
       region.loopStartSeconds<0 || region.loopEndSeconds<=region.loopStartSeconds ||
-      region.loopEndSeconds>buffer.duration+.01 || region.cueOffsetSeconds<0 ||
-      region.cueOffsetSeconds>=region.loopEndSeconds)throw Error('Invalid Fireplace region');
-    regions.set(region.id,{...region,buffer});
+      region.loopEndSeconds>buffer.duration+tolerance || region.cueOffsetSeconds<0 ||
+      region.cueOffsetSeconds>=Math.min(region.loopEndSeconds,buffer.duration))throw Error('Invalid Fireplace region');
+    regions.set(region.id,{...region,loopEndSeconds:Math.min(region.loopEndSeconds,buffer.duration),buffer});
   });
   if(!regions.has('low')||!regions.has('medium'))throw Error('Missing Fireplace region');
   return {regions,transitionSeconds:4,initialFadeSeconds:manifest.initialFadeSeconds};
