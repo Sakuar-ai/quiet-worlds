@@ -40,6 +40,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Compare Rain and Fireplace on iPhone viewports
         run: npm run test:ui
+      - name: Verify compact settings and centralized credits on mobile
+        run: npm run test:settings
       - name: Verify slider-selected Fireplace regions and render listening samples
         run: npm run test:audio
       - name: Verify actual mobile-browser playback and region switching

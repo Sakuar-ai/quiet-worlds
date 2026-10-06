@@ -1,5 +1,9 @@
 # Quiet Worlds
 
+## Settings / credits presentation — settings-15
+
+Gentle settings contains user controls only (Timer, slow movement, keep screen awake) plus one quiet **Sound credits & licenses** navigation row. That secondary sheet is the single in-app attribution surface, grouped by Rain, Fireplace, Forest, Ocean, Snow and future Cat. Add new external audio credits only there (`#credits-sheet` in `dist/index.html`) and retain provenance in `dist/audio/CREDITS.md`; never add source paragraphs to the main settings panel. Worlds without external recordings have only a short status note. Back returns to settings; dismiss returns focus to its visible opener. Audio, world visuals and intensity interaction are unchanged.
+
 当前版本为 **fireplace-14（visionear-regions-2）**。用户已确认原录音 7:40 附近的低火修订，并于 2026-10-06 明确授权发布。清单 `reviewStatus: APPROVED`；后续声音改动须重新经过试听确认。本版替换旧 audio-13 壁炉音频。
 
 使用用户已认可的 visionear 录音，**不再线性播放整段**。低火限定为原始 **07:40–08:20，从 07:40 起播**，循环不带入更早片段；中火仍为 00:40–02:00，默认 42–50% 从用户指出的约 01:00 起播。两段分别循环，周期 36 秒 / 76 秒，没有重新拼成一条线性序列。0–30% 低火，30% 以上中火，边界有 ±2% 防抖。没有确认干净的更强片段，因此 70–100% 保持中火，不用音量、滤波或叠层伪造咆哮。
@@ -51,7 +55,7 @@ Rain 是批准的参考场景。Fireplace 使用手绘 SVG 壁炉和滑杆选择
 
 ## 音频授权
 
-两段雨声由 InspectorJ 创作，来自 Freesound，使用 CC BY 4.0 授权。作者、原始链接及播放时的修改说明见 [音频署名](dist/audio/CREDITS.md)，并保留在应用设置中。音频许可不代表其他项目代码自动使用同一许可。
+两段雨声由 InspectorJ 创作，来自 Freesound，使用 CC BY 4.0 授权。作者、原始链接及播放时的修改说明见 [音频署名](dist/audio/CREDITS.md)，应用内统一在 **Sound credits & licenses** 展示。音频许可不代表其他项目代码自动使用同一许可。
 
 壁炉使用 visionear / Freesound “Aachen_Burning Fireplace Crackling Fire Sounds.wav”（CC0）。来源、局部修改与采样规格见 [音频署名](dist/audio/CREDITS.md)。
 

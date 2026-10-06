@@ -9,7 +9,7 @@
 - Public HQ MP3 versions downloaded on 2026-10-03; files are unmodified.
 - Playback modifications: 36-second excerpts, loop crossfade, level matching,
   soft peak limiting and gentle high/low-pass filtering. No synthesized rain.
-- Attribution and license links are also available in the app’s settings.
+- Attribution and license links are available in **Sound credits & licenses**, reached through one secondary row in Gentle settings. Never add individual source paragraphs to the main settings panel.
 
 ## Fireplace — fireplace-14, approved visionear regions
 

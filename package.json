@@ -5,6 +5,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test:ui": "node scripts/verify-mobile.mjs",
+    "test:settings": "node scripts/verify-settings.mjs",
     "test:audio": "node scripts/verify-fire-regions.mjs",
     "test:browser-audio": "node scripts/verify-fire-browser.mjs",
     "test:spectral": "python3 scripts/verify-fire-regions.py test-results/fire-regions"

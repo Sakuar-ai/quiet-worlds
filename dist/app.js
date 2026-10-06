@@ -557,7 +557,6 @@ function setScene(id) {
   $("#intensity-low").textContent=config.labels[0]; $("#intensity-high").textContent=config.labels[1]; $("#world-whisper").textContent=config.whisper; $("#intensity-description").textContent=intensityText(current,current.intensity);
   controls.setPlaying(wasPlaying,config.name);
   if (!wasPlaying) mixer.pause();
-  $('#fireplace-credit').hidden = config.id !== 'fireplace';
   if(wasPlaying) play();
   renderSceneList(); closeSheets();
 }
@@ -593,6 +592,14 @@ async function releaseWakeLock(){ if(wakeLock){ await wakeLock.release(); wakeLo
 
 $("#scene-trigger").addEventListener("click",()=>openSheet("scene-sheet",$("#scene-trigger")));
 $("#settings-trigger").addEventListener("click",()=>openSheet("settings-sheet",$("#settings-trigger")));
+$("#settings-timer-trigger").addEventListener("click",()=>openSheet("timer-sheet",$("#settings-trigger")));
+$("#credits-trigger").addEventListener("click",()=>{
+  openSheet("credits-sheet",$("#settings-trigger"));
+  $("#credits-trigger").setAttribute("aria-expanded","true");
+  $(".credits-worlds").scrollTop=0;
+});
+function backToSettings(){openSheet("settings-sheet",$("#settings-trigger"));$("#credits-trigger").focus();}
+$("#credits-back").addEventListener("click",backToSettings);
 document.querySelectorAll("[data-close-sheet]").forEach((button)=>button.addEventListener("click",closeSheets));
 $("#timer-trigger").addEventListener("click",()=>openSheet("timer-sheet",$("#timer-trigger")));
 document.querySelectorAll("[data-minutes]").forEach((button)=>button.addEventListener("click",()=>{ const minutes=Number(button.dataset.minutes); timer.setDuration(minutes); closeSheets(); showToast(`Timer set for ${minutes} minutes.`); }));
@@ -603,7 +610,7 @@ $("#motion-toggle").addEventListener("change",(event)=>{ renderer.setReducedMoti
 $("#keep-awake-toggle").addEventListener("change",(event)=>{ if(event.target.checked&&controls.playing) requestWakeLock(); if(!event.target.checked) releaseWakeLock(); });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&controls.playing&&$("#keep-awake-toggle").checked) requestWakeLock(); });
 document.addEventListener("keydown",(event)=>{
-  if(event.key==="Escape") closeSheets();
+  if(event.key==="Escape") { if(!$("#credits-sheet").hidden) backToSettings(); else closeSheets(); }
   const sheet=document.querySelector(".sheet:not([hidden])");
   if(sheet && event.key==="Tab") {
     const focusable=[...sheet.querySelectorAll("button, input, a[href]")]; const first=focusable[0], last=focusable.at(-1);

@@ -145,9 +145,19 @@ button { color: inherit; }
 .scene-option strong { color: var(--scene-accent); font-size: .98rem; font-weight: 600; }
 .scene-option small { color: #7a8393; font-family: "Comic Sans MS", "Bradley Hand", "Segoe Print", ui-rounded, system-ui, sans-serif; font-size: clamp(.58rem, 2.25vw, .66rem); line-height: 1.4; }
 .scene-option .option-label { display: grid; gap: 2px; width: 100%; }
-.settings-panel { padding-bottom: max(32px, env(safe-area-inset-bottom)); }
-.sound-credit { margin: 16px 5px 0; font: .75rem/1.6 ui-rounded, system-ui, sans-serif; color: #596671; }
+.settings-panel { max-height: 85svh; overflow-y: auto; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+.sound-credit { margin: 0; font: .78rem/1.65 ui-rounded, system-ui, sans-serif; color: #596671; overflow-wrap: anywhere; }
 .sound-credit a { color: inherit; text-underline-offset: 3px; }
+.setting-navigation { width: 100%; border: 0; background: transparent; color: inherit; text-align: left; }
+.credits-navigation { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 48px; margin-top: 12px; padding: 12px 5px; border: 0; border-top: 1px solid #e4e7e9; background: transparent; color: #737d85; font: .78rem/1.5 ui-rounded, system-ui, sans-serif; text-align: left; cursor: pointer; }
+.credits-panel { display: flex; flex-direction: column; max-height: 85svh; border-color: #c9ccd1; }
+.credits-back { flex-shrink: 0; align-self: flex-start; min-height: 44px; padding: 0 5px; border: 0; background: transparent; color: #737d85; font: .78rem/1.5 ui-rounded, system-ui, sans-serif; cursor: pointer; }
+.credits-back span { margin-right: 7px; }
+.credits-panel h2 { flex-shrink: 0; margin: 6px 5px 18px; color: #596670; font-size: 1.1rem; font-weight: 500; }
+.credits-worlds { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 5px 8px; }
+.credit-world + .credit-world { margin-top: 24px; }
+.credit-world h3 { margin: 0 0 7px; font-size: .95rem; font-weight: 500; color: #56636d; }
+.credit-note { margin: 6px 0 0; color: #78828a; font: .75rem/1.6 ui-rounded, system-ui, sans-serif; }
 .setting-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 14px 5px; border-top: 1px solid #d9dde0; cursor: pointer; }
 .setting-row strong { display: block; font-size: .95rem; font-weight: 600; }
 .setting-row small { display: block; margin-top: 3px; color: #68737b; font-family: ui-rounded, system-ui, sans-serif; font-size: .76rem; line-height: 1.35; }

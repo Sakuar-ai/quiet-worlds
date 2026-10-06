@@ -7,7 +7,7 @@
     <meta name="description" content="A hand-drawn ambient sound prototype where you adjust the world." />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='none' stroke='%23396b9c' stroke-linecap='round' stroke-width='5' d='M16 30c7-12 25-12 32 0M21 40c5 7 17 7 22 0M28 18l4-5 4 5'/%3E%3C/svg%3E" />
     <title>Quiet Worlds — ambient sound</title>
-    <link rel="stylesheet" href="./styles.css?v=phase2a-5" />
+    <link rel="stylesheet" href="./styles.css?v=settings-15" />
   </head>
   <body>
     <main class="app-shell" aria-label="Quiet Worlds ambient sound player">
@@ -71,6 +71,9 @@
         <div class="sheet-panel settings-panel">
           <div class="sheet-handle" aria-hidden="true"></div>
           <p class="sheet-kicker">Gentle settings</p>
+          <button id="settings-timer-trigger" class="setting-row setting-navigation" type="button" aria-haspopup="dialog" aria-controls="timer-sheet">
+            <strong>Timer</strong><span aria-hidden="true">›</span>
+          </button>
           <label class="setting-row" for="motion-toggle">
             <span><strong>Slow the movement</strong><small>Let the world move at an unhurried pace.</small></span>
             <input id="motion-toggle" type="checkbox" />
@@ -79,8 +82,35 @@
             <span><strong>Keep this world open</strong><small>Ask this screen to stay awake while playing.</small></span>
             <input id="keep-awake-toggle" type="checkbox" />
           </label>
-          <p class="sound-credit">Rain recordings: <a href="https://freesound.org/people/InspectorJ/sounds/401277/" target="_blank" rel="noopener noreferrer">Rain, Moderate, A</a> and <a href="https://freesound.org/people/InspectorJ/sounds/401275/" target="_blank" rel="noopener noreferrer">C</a> by <a href="https://www.jshaw.co.uk/" target="_blank" rel="noopener noreferrer">InspectorJ</a> / Freesound, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Excerpts looped, level-matched and filtered.</p>
-          <p id="fireplace-credit" class="sound-credit" hidden>Fireplace: <a href="https://freesound.org/people/visionear/sounds/501417/" target="_blank" rel="noopener noreferrer">Aachen_Burning Fireplace Crackling Fire Sounds.wav</a> by visionear, <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>. Slider-selected natural fire regions, with four-second transitions. Medium starts near the original 1:00 reference; low starts at 7:40. One steady bed; two adjacent beds overlap only while transitioning. Local peak edits and loop crossfades; no added crackles, EQ, compression or normalization.</p>
+          <button id="credits-trigger" class="credits-navigation" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="credits-sheet">
+            <span>Sound credits &amp; licenses</span><span aria-hidden="true">›</span>
+          </button>
+        </div>
+      </section>
+
+      <section id="credits-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="credits-title" hidden>
+        <button class="scrim" data-close-sheet aria-label="Close sound credits"></button>
+        <div class="sheet-panel credits-panel">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <button id="credits-back" class="credits-back" type="button"><span aria-hidden="true">‹</span> Gentle settings</button>
+          <h2 id="credits-title">Sound credits &amp; licenses</h2>
+          <!-- Single in-app attribution location: add future external audio here, never in Gentle settings. -->
+          <div class="credits-worlds">
+            <section class="credit-world" aria-labelledby="credit-rain-title">
+              <h3 id="credit-rain-title">Rain</h3>
+              <p class="sound-credit"><a href="https://freesound.org/people/InspectorJ/sounds/401277/" target="_blank" rel="noopener noreferrer">Rain, Moderate, A</a> and <a href="https://freesound.org/people/InspectorJ/sounds/401275/" target="_blank" rel="noopener noreferrer">Rain, Moderate, C</a><br>By <a href="https://www.jshaw.co.uk/" target="_blank" rel="noopener noreferrer">InspectorJ</a> · Freesound · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></p>
+              <p class="credit-note">Excerpts looped, level-matched, peak-limited and filtered.</p>
+            </section>
+            <section id="fireplace-credit" class="credit-world" aria-labelledby="credit-fireplace-title">
+              <h3 id="credit-fireplace-title">Fireplace</h3>
+              <p class="sound-credit"><a href="https://freesound.org/people/visionear/sounds/501417/" target="_blank" rel="noopener noreferrer">Aachen_Burning Fireplace Crackling Fire Sounds.wav</a><br>By visionear · Freesound · <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a></p>
+              <p class="credit-note">Selected natural fire regions, with local peak edits and loop crossfades.</p>
+            </section>
+            <section class="credit-world" aria-labelledby="credit-forest-title"><h3 id="credit-forest-title">Forest</h3><p class="credit-note">Generated in-app. No external audio recordings.</p></section>
+            <section class="credit-world" aria-labelledby="credit-ocean-title"><h3 id="credit-ocean-title">Ocean</h3><p class="credit-note">Generated in-app. No external audio recordings.</p></section>
+            <section class="credit-world" aria-labelledby="credit-snow-title"><h3 id="credit-snow-title">Snow</h3><p class="credit-note">Generated in-app. No external audio recordings.</p></section>
+            <section class="credit-world" aria-labelledby="credit-cat-title"><h3 id="credit-cat-title">Cat</h3><p class="credit-note">Not yet available. No audio assets.</p></section>
+          </div>
         </div>
       </section>
 
@@ -106,6 +136,6 @@
 
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>
-    <script type="module" src="./app.js?v=fireplace-14"></script>
+    <script type="module" src="./app.js?v=settings-15"></script>
   </body>
 </html>
