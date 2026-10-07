@@ -16,13 +16,15 @@ const withoutCreditsNavigation=source=>source
   .replace(/^  \$\('#fireplace-credit'\).*\n/m,'')
   .replace(/\$\("#credits-trigger"\)[\s\S]*?(?=document.querySelectorAll\("\[data-close-sheet\]"\))/,'')
   .replace('if(event.key==="Escape") { if(!$("#credits-sheet").hidden) backToSettings(); else closeSheets(); }','if(event.key==="Escape") closeSheets();');
-const visualApp=source=>withoutCreditsNavigation(source).replace(/^import .*;\n/gm,'').replace(/(id: "fireplace"[^\n]*initialIntensity:) [\d.]+/,'$1 .42').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed|one long natural fireplace recording|slider-selected natural fireplace regions)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
+const withoutIconDesigns=source=>source.replace(/const MARKS = \{[\s\S]*?\n\};\n/,'').replace(/MARKS\[config.id\]|worldArt\(config.id,config.accent\)/g,'worldIcon(config.id)');
+const visualApp=source=>withoutIconDesigns(withoutCreditsNavigation(source)).replace(/^import .*;\n/gm,'').replace(/(id: "fireplace"[^\n]*initialIntensity:) [\d.]+/,'$1 .42').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed|one long natural fireplace recording|slider-selected natural fireplace regions)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
 assert.equal(visualApp(app),visualApp(oldApp));
 const listeningStyles=source=>source.split('\n').filter(line=>!/^\.(?:settings-panel|sound-credit|setting-navigation|credits-navigation|credits-panel|credits-back|credits-worlds|credit-world|credit-note)(?:[ .:{+]|$)/.test(line)).join('\n');
 assert.equal(listeningStyles(readFileSync('dist/styles.css','utf8')),listeningStyles(oldCss),'all styles outside settings/credits remain byte-identical');
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
-assert.equal(readFileSync('dist/world-art.js','utf8'),previous('world-art.js'));
+// Only the shared navigation artwork changes; verify-icons checks all five identities.
+const oldWorldArt=previous('world-art.js');
 const oldFire=previous('fireplace.js'),fire=readFileSync('dist/fireplace.js','utf8');
 assert.equal(fire,oldFire.replace(/export function fireMix[\s\S]*?(?=export class FireplaceRenderer)/,''),'only remove obsolete mixer helper; approved drawing unchanged');
 const pigment=source=>source.slice(source.indexOf('function drawFirelight'),source.indexOf('export function fireParameters'));
@@ -56,6 +58,7 @@ const makePage=async(viewport,old=false)=>{
   await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:(old?oldApp:app)+'\nwindow.__sceneQA={renderer,setScene,slider,intensityText,pause};'}));
   if(old)await page.route('**/styles.css*',r=>r.fulfill({contentType:'text/css',body:oldCss}));
   if(old)await page.route('**/fireplace.js*',r=>r.fulfill({contentType:'text/javascript',body:oldFire}));
+  if(old)await page.route('**/world-art.js*',r=>r.fulfill({contentType:'text/javascript',body:oldWorldArt}));
   await page.goto(url);await page.waitForFunction(()=>window.__sceneQA);
   await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important}'});
   // Let the initial ResizeObserver and fonts settle before drawing the frozen frame.
@@ -70,7 +73,9 @@ try {
     const before=await measure(old.page),rain=await measure(current.page);
     assert.deepEqual(rain,before,`${key}: approved Rain layout must remain identical`);
     for(const page of [old.page,current.page])await page.evaluate(()=>{const r=window.__sceneQA.renderer;r.render(r.start+3000);});
-    const oldPng=await old.page.screenshot({path:`test-results/${key}-rain-baseline.png`}),rainPng=await current.page.screenshot({path:`test-results/${key}-rain.png`});
+    // The requested header symbol may differ, but its box and ALL other pixels
+    // remain protected. Mask only that same-size symbol in both screenshots.
+    const oldPng=await old.page.screenshot({path:`test-results/${key}-rain-baseline.png`,mask:[old.page.locator('#scene-mark')]}),rainPng=await current.page.screenshot({path:`test-results/${key}-rain.png`,mask:[current.page.locator('#scene-mark')]});
     const canvasPixels=page=>page.locator('#scene-canvas').evaluate(e=>e.toDataURL());
     assert.equal(await canvasPixels(current.page),await canvasPixels(old.page),`${key}: Rain drawing must remain pixel-identical`);
     // Chromium may composite the thin rounded slider rail with slightly different

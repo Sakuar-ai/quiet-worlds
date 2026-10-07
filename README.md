@@ -1,5 +1,9 @@
 # Quiet Worlds
 
+## Shared world icons — icons-17
+
+`dist/world-icons.js` is the single source of truth: `WORLD_ICONS` stores one drawing and palette per world, and `worldIcon(id)` renders it with unique SVG paint-server IDs. Both the scene header and Choose a World call this exact function; only their existing CSS sizes differ. Rain is cloud/rain, Fireplace flame/crossed logs, Forest three pines, Ocean a rounded multi-curl wave group, Snow a lavender snowflake. New scene-related UI must call `worldIcon(id)` rather than draw its own symbol. Add future worlds to this registry once. `world-art.js` only re-exports the shared API; it contains no separate art. Sliders keep their existing interaction handles. `npm run test:icons` verifies identical SVG artwork/paint in both contexts, unique IDs, five-world switching, and captures each world at mobile sizes for visual review. Listening layouts, scene drawings, audio and controls are unchanged.
+
 ## Settings / credits presentation — settings-16
 
 Gentle settings contains unique preferences only (slow movement, keep screen awake) plus one quiet **Sound credits & licenses** navigation row. The top-right Timer is the only timer entry point; do not duplicate primary controls in settings. That secondary credits sheet is the single in-app attribution surface, grouped by Rain, Fireplace, Forest, Ocean, Snow and future Cat. Add new external audio credits only there (`#credits-sheet` in `dist/index.html`) and retain provenance in `dist/audio/CREDITS.md`; never add source paragraphs to the main settings panel. Worlds without external recordings have only a short status note. Back returns to settings; dismiss returns focus to its visible opener. Timer functionality, audio, world visuals and intensity interaction are unchanged.

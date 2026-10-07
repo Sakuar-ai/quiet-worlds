@@ -42,6 +42,15 @@ jobs:
         run: npm run test:ui
       - name: Verify compact settings and centralized credits on mobile
         run: npm run test:settings
+      - name: Verify every world icon in header and picker
+        run: npm run test:icons
+      - name: Save icon visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-icon-review
+          path: test-results/icons
+          retention-days: 14
       - name: Verify slider-selected Fireplace regions and render listening samples
         run: npm run test:audio
       - name: Verify actual mobile-browser playback and region switching

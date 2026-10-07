@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 // This app ships source modules directly; the static build validates the exact
 // deployment directory without rewriting Rain, audio files or other assets.
-for (const file of ['app.js','fireplace.js','fireplace-audio.js','world-art.js']) {
+for (const file of ['app.js','fireplace.js','fireplace-audio.js','world-art.js','world-icons.js']) {
   const result=spawnSync(process.execPath,['--input-type=module','--check'],{input:readFileSync('dist/'+file),encoding:'utf8'});
   assert.equal(result.status,0,`${file}: ${result.stderr}`);
 }
@@ -19,6 +19,13 @@ for(const [,path] of html.matchAll(/(?:src|href)="\.\/([^"?]+)(?:\?[^"]*)?"/g)) 
   assert.ok(existsSync('dist/'+path),`Missing entry asset: ${path}`);
 }
 const app=readFileSync('dist/app.js','utf8');
+assert.ok(!/const MARKS|FIRE_MARK|worldArt\(/.test(app),'No alternate header or picker icon designs');
+assert.equal((app.match(/worldIcon\(config.id\)/g)||[]).length,2,'Header and picker use the same registry');
+const {WORLD_ICONS,worldIcon}=await import('../dist/world-icons.js');
+assert.deepEqual(Object.keys(WORLD_ICONS),['rain','fireplace','forest','ocean','snow']);
+assert.equal((WORLD_ICONS.ocean.art.match(/data-wave=/g)||[]).length,3,'Ocean is a multi-curl wave composition');
+assert.throws(()=>worldIcon('unregistered'),/No world icon/);
+for(const id of Object.keys(WORLD_ICONS))assert.ok(worldIcon(id).includes(`data-world-icon="${id}"`));
 for(const [,path] of app.matchAll(/url: "\.\/([^"]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing audio: ${path}`);
 assert.ok(!app.includes('soft-fire')&&!app.includes('fireMix('),'retire the three normalized Fireplace excerpts');
 const fireAudio=readFileSync('dist/fireplace-audio.js','utf8');

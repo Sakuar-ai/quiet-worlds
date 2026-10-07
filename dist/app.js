@@ -1,6 +1,6 @@
 import { FireplaceRenderer } from './fireplace.js?v=phase2a-12';
 import { FireplaceAudio, prepareFireRecording } from './fireplace-audio.js?v=fireplace-14';
-import { worldArt, FIRE_MARK } from './world-art.js?v=phase2a-2';
+import { worldIcon } from './world-icons.js?v=icons-17';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;
@@ -74,13 +74,6 @@ const SCENES = {
   }
 };
 
-const MARKS = {
-  rain: `<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M8.8 20.3C4.5 21 2.6 18.6 3.5 15.4c.7-2.8 3.2-4 5.8-3.4-.3-3.4 2.4-6.6 6-6.2 1 .1 2 .5 2.8 1.1C19.2 3.2 22.4 1.3 26 2.5c3 1 4.1 4 3.4 6.9 2.5-1.5 5.6-1.1 6.7 1.5 1.5 3.4-.8 6.8-4.5 7.6"/><path d="m14.5 18.7-1.9 4.5m10.7-6.5-2.1 4.6m6.6 1.9-1.7 4m-8.3-1.7-1.7 4"/></svg>`,
-  fireplace: FIRE_MARK,
-  forest: `<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M10 25V13M5 17l5-10 5 10M4 22h12M26 25V9M21 14l5-10 5 10M20 19h12"/></svg>`,
-  ocean: `<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M3 18c5 0 6-8 12-8 6 0 6 8 12 8 5 0 6-5 10-5M4 23c5 0 6-3 11-3s6 3 11 3 7-3 11-3"/></svg>`,
-  snow: `<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M20 3v24M9.6 9l20.8 12M30.4 9 9.6 21M16.5 5l3.5 3 3.5-3M16.5 25l3.5-3 3.5 3M7 13l4 1-1 4M33 13l-4 1 1 4"/></svg>`
-};
 
 class SceneRenderer {
   constructor(canvas) {
@@ -553,7 +546,7 @@ function setScene(id) {
   playbackRequest++;
   current=new Scene(config); renderer.setScene(config); renderer.setIntensity(current.intensity); slider.set(current.intensity);
   app.dataset.scene=config.id; app.style.setProperty("--accent",config.accent);
-  $("#scene-name").textContent=config.name; $("#scene-mark").innerHTML=MARKS[config.id];
+  $("#scene-name").textContent=config.name; $("#scene-mark").innerHTML=worldIcon(config.id);
   $("#intensity-low").textContent=config.labels[0]; $("#intensity-high").textContent=config.labels[1]; $("#world-whisper").textContent=config.whisper; $("#intensity-description").textContent=intensityText(current,current.intensity);
   controls.setPlaying(wasPlaying,config.name);
   if (!wasPlaying) mixer.pause();
@@ -569,7 +562,7 @@ function renderSceneList() {
     button.style.setProperty('--scene-accent',config.accent);
     button.setAttribute('aria-current',String(config.id===current.config.id));
     button.setAttribute('aria-label',`${config.name}: ${config.labels[0]} to ${config.labels[1]}`);
-    button.innerHTML=`<span class="world-art">${worldArt(config.id,config.accent)}</span><span class="option-label"><strong>${config.name}</strong><small>${config.labels[0]} — ${config.labels[1]}</small></span>`;
+    button.innerHTML=`<span class="world-art">${worldIcon(config.id)}</span><span class="option-label"><strong>${config.name}</strong><small>${config.labels[0]} — ${config.labels[1]}</small></span>`;
     button.addEventListener('click',()=>setScene(config.id));list.append(button);
   });
 }
