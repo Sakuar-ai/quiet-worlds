@@ -19,13 +19,17 @@ for(const [,path] of html.matchAll(/(?:src|href)="\.\/([^"?]+)(?:\?[^"]*)?"/g)) 
   assert.ok(existsSync('dist/'+path),`Missing entry asset: ${path}`);
 }
 const app=readFileSync('dist/app.js','utf8');
-assert.ok(!/const MARKS|FIRE_MARK|worldArt\(/.test(app),'No alternate header or picker icon designs');
-assert.equal((app.match(/worldIcon\(config.id\)/g)||[]).length,2,'Header and picker use the same registry');
+assert.ok(!/const MARKS|FIRE_MARK|worldArt\(/.test(app),'Keep both icon levels in the family registry, not ad hoc screen-specific maps');
+assert.equal((app.match(/worldIcon\(config.id/g)||[]).length,2,'Header and picker use the same family registry');
 const {WORLD_ICONS,worldIcon}=await import('../dist/world-icons.js');
-assert.deepEqual(Object.keys(WORLD_ICONS),['rain','fireplace','forest','ocean','snow']);
+assert.deepEqual(Object.keys(WORLD_ICONS),['rain','fireplace','forest','ocean','snow','cat']);
 assert.equal((WORLD_ICONS.ocean.art.match(/data-wave=/g)||[]).length,3,'Ocean is a multi-curl wave composition');
 assert.throws(()=>worldIcon('unregistered'),/No world icon/);
-for(const id of Object.keys(WORLD_ICONS))assert.ok(worldIcon(id).includes(`data-world-icon="${id}"`));
+for(const [id,icon] of Object.entries(WORLD_ICONS)){
+  assert.ok(worldIcon(id,'header').includes(`data-world-icon="${id}"`));
+  if(icon.art)assert.ok(worldIcon(id).includes(`data-world-icon="${id}"`));
+}
+assert.throws(()=>worldIcon('cat'),/No picker artwork/,'Cat has a reserved header, not an invented playable world');
 for(const [,path] of app.matchAll(/url: "\.\/([^"]+)"/g)) assert.ok(existsSync('dist/'+path),`Missing audio: ${path}`);
 assert.ok(!app.includes('soft-fire')&&!app.includes('fireMix('),'retire the three normalized Fireplace excerpts');
 const fireAudio=readFileSync('dist/fireplace-audio.js','utf8');

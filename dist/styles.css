@@ -50,10 +50,9 @@ button { color: inherit; }
 
 .title-lockup { text-align: center; line-height: 1; }
 .title-lockup h1 { margin: 4px 0 0; color: var(--accent, #396b9c); font-size: 1.58rem; font-weight: 600; letter-spacing: .01em; }
-.scene-mark { display: grid; place-items: center; height: 27px; color: var(--accent, #396b9c); }
-.scene-mark svg { width: 34px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
+.scene-mark { position: relative; display: grid; place-items: center; height: 27px; color: var(--accent, #396b9c); }
+.scene-mark svg { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 36px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
 .app:is([data-scene="rain"], [data-scene="fireplace"]) .title-lockup h1 { font-size: 1.22rem; font-weight: 500; margin-top: 6px; }
-.app:is([data-scene="rain"], [data-scene="fireplace"]) .scene-mark svg { width: 29px; height: 23px; stroke-width: 1.65; }
 .app:is([data-scene="rain"], [data-scene="fireplace"]) .scene-mark { height: 23px; }
 
 .icon-button, .timer-button, .play-button {

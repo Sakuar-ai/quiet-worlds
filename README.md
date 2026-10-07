@@ -1,8 +1,8 @@
 # Quiet Worlds
 
-## Shared world icons — icons-17
+## Two-level world icon family — icons-18
 
-`dist/world-icons.js` is the single source of truth: `WORLD_ICONS` stores one drawing and palette per world, and `worldIcon(id)` renders it with unique SVG paint-server IDs. Both the scene header and Choose a World call this exact function; only their existing CSS sizes differ. Rain is cloud/rain, Fireplace flame/crossed logs, Forest three pines, Ocean a rounded multi-curl wave group, Snow a lavender snowflake. New scene-related UI must call `worldIcon(id)` rather than draw its own symbol. Add future worlds to this registry once. `world-art.js` only re-exports the shared API; it contains no separate art. Sliders keep their existing interaction handles. `npm run test:icons` verifies identical SVG artwork/paint in both contexts, unique IDs, five-world switching, and captures each world at mobile sizes for visual review. Listening layouts, scene drawings, audio and controls are unchanged.
+`dist/world-icons.js` is the single family registry. Each entry shares a palette but has distinct `art` (full picker illustration) and `header` (simple emblem). Use `worldIcon(id)` in the picker and `worldIcon(id, 'header')` at the top of a scene. Headers: cloud/rain, single flame, single leaf, one rounded curled wave, one snowflake; Cat reserves a simplified black-and-white British Shorthair head without adding a playable Cat world. Picker artwork stays unchanged. Header marks omit background patches, use consistent light pencil strokes and a 36×32 display box, anchored inside the existing layout slot so titles and scenes do not move. Future UI should choose the appropriate level from this registry, never invent unrelated artwork. `world-art.js` only re-exports the shared API. Tests require distinct variants with shared family ink, simple header geometry, unique SVG IDs, unchanged scene/control layout and five-world switching; a six-mark visual comparison includes the reserved Cat mark. No scene, audio, slider, timer or settings changes.
 
 ## Settings / credits presentation — settings-16
 

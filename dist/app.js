@@ -1,6 +1,6 @@
 import { FireplaceRenderer } from './fireplace.js?v=phase2a-12';
 import { FireplaceAudio, prepareFireRecording } from './fireplace-audio.js?v=fireplace-14';
-import { worldIcon } from './world-icons.js?v=icons-17';
+import { worldIcon } from './world-icons.js?v=icons-18';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;
@@ -546,7 +546,7 @@ function setScene(id) {
   playbackRequest++;
   current=new Scene(config); renderer.setScene(config); renderer.setIntensity(current.intensity); slider.set(current.intensity);
   app.dataset.scene=config.id; app.style.setProperty("--accent",config.accent);
-  $("#scene-name").textContent=config.name; $("#scene-mark").innerHTML=worldIcon(config.id);
+  $("#scene-name").textContent=config.name; $("#scene-mark").innerHTML=worldIcon(config.id,'header');
   $("#intensity-low").textContent=config.labels[0]; $("#intensity-high").textContent=config.labels[1]; $("#world-whisper").textContent=config.whisper; $("#intensity-description").textContent=intensityText(current,current.intensity);
   controls.setPlaying(wasPlaying,config.name);
   if (!wasPlaying) mixer.pause();

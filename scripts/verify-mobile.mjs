@@ -16,10 +16,10 @@ const withoutCreditsNavigation=source=>source
   .replace(/^  \$\('#fireplace-credit'\).*\n/m,'')
   .replace(/\$\("#credits-trigger"\)[\s\S]*?(?=document.querySelectorAll\("\[data-close-sheet\]"\))/,'')
   .replace('if(event.key==="Escape") { if(!$("#credits-sheet").hidden) backToSettings(); else closeSheets(); }','if(event.key==="Escape") closeSheets();');
-const withoutIconDesigns=source=>source.replace(/const MARKS = \{[\s\S]*?\n\};\n/,'').replace(/MARKS\[config.id\]|worldArt\(config.id,config.accent\)/g,'worldIcon(config.id)');
+const withoutIconDesigns=source=>source.replace(/const MARKS = \{[\s\S]*?\n\};\n/,'').replace(/MARKS\[config.id\]|worldArt\(config.id,config.accent\)|worldIcon\(config.id,'header'\)/g,'worldIcon(config.id)');
 const visualApp=source=>withoutIconDesigns(withoutCreditsNavigation(source)).replace(/^import .*;\n/gm,'').replace(/(id: "fireplace"[^\n]*initialIntensity:) [\d.]+/,'$1 .42').replace(/    audio: \[\n      \{ label: "(?:soft ember body|single natural fire bed|one long natural fireplace recording|slider-selected natural fireplace regions)[\s\S]*?\n    \]/,'    audio: []').replace(/class AudioMixer \{[\s\S]*?\nclass IntensitySlider/,'class IntensitySlider');
 assert.equal(visualApp(app),visualApp(oldApp));
-const listeningStyles=source=>source.split('\n').filter(line=>!/^\.(?:settings-panel|sound-credit|setting-navigation|credits-navigation|credits-panel|credits-back|credits-worlds|credit-world|credit-note)(?:[ .:{+]|$)/.test(line)).join('\n');
+const listeningStyles=source=>source.split('\n').filter(line=>!/^\.(?:settings-panel|sound-credit|setting-navigation|credits-navigation|credits-panel|credits-back|credits-worlds|credit-world|credit-note|scene-mark)(?:[ .:{+]|$)/.test(line)&&!line.startsWith('.app:is([data-scene="rain"], [data-scene="fireplace"]) .scene-mark svg')).join('\n');
 assert.equal(listeningStyles(readFileSync('dist/styles.css','utf8')),listeningStyles(oldCss),'all styles outside settings/credits remain byte-identical');
 const artPath='dist/art/fireplace-reference-v6.png';
 assert.ok(readFileSync(artPath).equals(execFileSync('git',['show',`${baseline}:${artPath}`],{maxBuffer:8*1024*1024})), 'existing fireplace artwork must remain byte-identical');
@@ -48,7 +48,7 @@ mkdirSync('test-results',{recursive:true});
 writeFileSync('test-results/intensity-response.json',JSON.stringify([0,.15,.42,.7,1].map(intensity=>({intensity,before:oldParameters(intensity),after:fireParameters(intensity)})),null,2));
 const browser=await chromium.launch({headless:true});
 const measurements=[];
-const selectors=['.app','.top-bar','.world','#scene-canvas','.title-lockup h1','.scene-mark','.scene-mark svg','.timer-button','.timer-button svg','.intensity-area','.intensity-copy','.range-wrap','.controls','.play-button','.controls .icon-button'];
+const selectors=['.app','.top-bar','.world','#scene-canvas','.title-lockup h1','.scene-mark','.timer-button','.timer-button svg','.intensity-area','.intensity-copy','.range-wrap','.controls','.play-button','.controls .icon-button'];
 const measure=page=>page.evaluate(selectors=>Object.fromEntries(selectors.map(selector=>{const e=document.querySelector(selector),b=e.getBoundingClientRect(),s=getComputedStyle(e);return [selector,{x:b.x,y:b.y,width:b.width,height:b.height,fontSize:s.fontSize,fontWeight:s.fontWeight,padding:s.padding,strokeWidth:s.strokeWidth}];})),selectors);
 const makePage=async(viewport,old=false)=>{
   const page=await browser.newPage({viewport,deviceScaleFactor:2,isMobile:true,hasTouch:true});
@@ -73,9 +73,9 @@ try {
     const before=await measure(old.page),rain=await measure(current.page);
     assert.deepEqual(rain,before,`${key}: approved Rain layout must remain identical`);
     for(const page of [old.page,current.page])await page.evaluate(()=>{const r=window.__sceneQA.renderer;r.render(r.start+3000);});
-    // The requested header symbol may differ, but its box and ALL other pixels
-    // remain protected. Mask only that same-size symbol in both screenshots.
-    const oldPng=await old.page.screenshot({path:`test-results/${key}-rain-baseline.png`,mask:[old.page.locator('#scene-mark')]}),rainPng=await current.page.screenshot({path:`test-results/${key}-rain.png`,mask:[current.page.locator('#scene-mark')]});
+    // Header emblems may grow inside their unchanged layout slot. Hide only
+    // the SVG during comparison; all other screen pixels remain protected.
+    const oldPng=await old.page.screenshot({path:`test-results/${key}-rain-baseline.png`,style:'#scene-mark svg{visibility:hidden!important}'}),rainPng=await current.page.screenshot({path:`test-results/${key}-rain.png`,style:'#scene-mark svg{visibility:hidden!important}'});
     const canvasPixels=page=>page.locator('#scene-canvas').evaluate(e=>e.toDataURL());
     assert.equal(await canvasPixels(current.page),await canvasPixels(old.page),`${key}: Rain drawing must remain pixel-identical`);
     // Chromium may composite the thin rounded slider rail with slightly different
