@@ -6,7 +6,9 @@ import {FireplaceAudio,prepareFireRecording,selectFireRegion} from '../dist/fire
 
 const out=resolve(process.argv[2]||'test-results/fire-regions');mkdirSync(out,{recursive:true});
 const app=readFileSync('dist/app.js','utf8');
-const SCENES=new Function(app.slice(app.indexOf('const SCENES ='),app.indexOf('const MARKS ='))+'return SCENES;')();
+const scenesStart=app.indexOf('const SCENES ='),scenesEnd=app.indexOf('class SceneRenderer {');
+assert.ok(scenesStart>=0&&scenesEnd>scenesStart,'extract scene configuration independently of icon implementation');
+const SCENES=new Function(app.slice(scenesStart,scenesEnd)+'return SCENES;')();
 const mixerCode=app.slice(app.indexOf('class AudioMixer {'),app.indexOf('class IntensitySlider {'));
 const manifest=JSON.parse(readFileSync('dist/audio/fireplace-visionear-regions-v2.json'));
 assert.equal(manifest.regions[0].sourceStartSeconds,460);
