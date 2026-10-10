@@ -44,6 +44,15 @@ jobs:
         run: npm run test:settings
       - name: Verify every world icon in header and picker
         run: npm run test:icons
+      - name: Verify Ocean five-stage response and shared mobile layout
+        run: npm run test:ocean
+      - name: Save Ocean visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocean-visual-review
+          path: test-results/ocean
+          retention-days: 14
       - name: Save icon visual review
         if: always()
         uses: actions/upload-artifact@v4

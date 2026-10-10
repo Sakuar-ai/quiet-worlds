@@ -1,6 +1,7 @@
 import { FireplaceRenderer } from './fireplace.js?v=phase2a-12';
 import { FireplaceAudio, prepareFireRecording } from './fireplace-audio.js?v=fireplace-14';
-import { worldIcon } from './world-icons.js?v=icons-18';
+import { worldIcon } from './world-icons.js?v=ocean-19';
+import { drawOceanWorld } from './ocean.js?v=ocean-19';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;
@@ -51,10 +52,10 @@ const SCENES = {
     ]
   },
   ocean: {
-    id: "ocean", name: "Ocean", mark: "〰〰", accent: "#2f76ae", initialIntensity: .40,
+    id: "ocean", name: "Ocean", mark: "〰〰", accent: "#5f8fab", initialIntensity: .40,
     labels: ["Calm", "Waves"], whisper: "The water keeps a rounded edge.",
     descriptions: ["The ocean is resting.", "Rounded waves are arriving.", "The water is moving in layers."],
-    aria: "Soft rounded hand-drawn ocean waves moving toward a horizon",
+    aria: "Rounded hand-drawn blue waves with playful white foam",
     audio: [
       { label: "shore hush", kind: "noise", frequency: 1200, q: .25, gain: .040 },
       { label: "rolling wave", kind: "noise", frequency: 520, q: .22, gain: .050 },
@@ -268,19 +269,7 @@ class SceneRenderer {
   }
 
   drawOcean(ctx, w, h, t) {
-    const i=this.scene.intensity, blue="#2f76ae", pale="#8fc0dc", deep="#5a9bc5"; const horizon=h*.48;
-    this.line(ctx,[[0,horizon],[w,horizon+1]],blue,1.25,.58);
-    for(let c=0;c<4;c++){ const y=horizon-35-c*24; const x=(c*.24*w+Math.sin(t*.16+c)*w*.07)%w; this.curve(ctx,[x,y],[[x+w*.05,y-8,x+w*.11,y-8,x+w*.16,y],[x+w*.22,y+5,x+w*.25,y-2,x+w*.3,y+1]],pale,1.1,.38); }
-    const bands=5;
-    for(let band=0;band<bands;band++) {
-      const y=horizon+22+band*(h-horizon-35)/bands; const amp=lerp(9,29,i)*(1+band*.13); const speed=.32+i*.44+band*.04; const spacing=lerp(78,57,i); const offset=(t*speed*42+band*35)%spacing;
-      for(let x=-spacing+offset;x<w+spacing;x+=spacing) {
-        const base=y+Math.sin(x*.14+band)*3;
-        this.curve(ctx,[x,base],[[x+spacing*.16,base-amp,x+spacing*.36,base-amp,x+spacing*.5,base],[x+spacing*.67,base+amp*.2,x+spacing*.84,base+amp*.1,x+spacing,base]],band%2?deep:blue,1.45,.55+band*.06);
-        if (band>1) this.curve(ctx,[x+spacing*.12,base-amp*.28],[[x+spacing*.25,base-amp*.58,x+spacing*.35,base-amp*.47,x+spacing*.44,base-amp*.15]],"#ffffff",2.1,.75);
-      }
-    }
-    for(let n=0;n<5;n++){ const y=horizon+10+n*34; this.line(ctx,[[0,y],[w,y+Math.sin(n)*2]],pale,.8,.25); }
+    this.oceanState=drawOceanWorld(ctx,w,h,t,this.scene.intensity);
   }
 
   drawSnow(ctx, w, h, t) {

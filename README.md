@@ -1,5 +1,11 @@
 # Quiet Worlds
 
+## Ocean illustrated wave world — ocean-19
+
+The latest Ocean style guide drives a continuous white-sky / blue-water composition: three quiet pencil clouds, three small birds, a tiny sailboat, and rounded hand-drawn foam crests. `dist/ocean.js` draws live Canvas geometry; intensity continuously progresses through Calm → Light ripple → Gentle waves → Rolling waves → Lively waves. No videos, frame sequences or state-image swaps. The scene uses Rain's existing scene container, control sizes and vertical rhythm. Only Ocean joins those shared style selectors; Rain and Fireplace remain unchanged.
+
+The same module provides Ocean artwork to the central `WORLD_ICONS` family registry: a fuller three-wave picker illustration and a simple curled wave-line header, following the new guide. The slider uses `art/ocean-shell.svg`; the rail is interrupted behind the shell, including at the range endpoints. Audio, timer, settings, picker behavior and other scene drawings are unchanged. `npm run test:ocean` captures five intensity states on three portrait viewports, checks live motion and range input, compares Rain/Ocean geometry, and protects all audio code against the icons-18 baseline. Screenshots are saved as the `ocean-visual-review` Actions artifact.
+
 ## Two-level world icon family — icons-18
 
 `dist/world-icons.js` is the single family registry. Each entry shares a palette but has distinct `art` (full picker illustration) and `header` (simple emblem). Use `worldIcon(id)` in the picker and `worldIcon(id, 'header')` at the top of a scene. Headers: cloud/rain, single flame, single leaf, one rounded curled wave, one snowflake; Cat reserves a simplified black-and-white British Shorthair head without adding a playable Cat world. Picker artwork stays unchanged. Header marks omit background patches, use consistent light pencil strokes and a 36×32 display box, anchored inside the existing layout slot so titles and scenes do not move. Future UI should choose the appropriate level from this registry, never invent unrelated artwork. `world-art.js` only re-exports the shared API. Tests require distinct variants with shared family ink, simple header geometry, unique SVG IDs, unchanged scene/control layout and five-world switching; a six-mark visual comparison includes the reserved Cat mark. No scene, audio, slider, timer or settings changes.

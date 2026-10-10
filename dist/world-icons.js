@@ -1,3 +1,4 @@
+import { OCEAN_ICON } from './ocean.js?v=ocean-19';
 // One family per world, two intentional levels: descriptive picker / simple header.
 // Keep both variants here with the same palette and gentle pencil line quality.
 const pine = (x,y,scale) => `<g transform="translate(${x} ${y}) scale(${scale})"><path d="M0 57 1 7" stroke="#967c62" stroke-width="2.8"/><path d="M1 0C-1 9-5 17-10 23l7-3-12 15 10-4-13 16 12-4-10 11c7-1 12-5 17-9 5 5 10 8 16 9L8 42l9 4L7 30l8 4L5 18l6 4Z" fill="#96aa91" stroke="#607e68" stroke-width="1.4"/><path d="M1 7 0 45M-1 20l-5 5m8-7 5 9M-1 31l-7 7m10-7 7 8M-2 42l-8 6m12-6 7 6" stroke="#617e66" stroke-width="1.25"/><path d="m-4 22 3-4m5 14 4 6m-13 6-4 4" stroke="#fff" stroke-opacity=".65" stroke-width="1.3"/></g>`;
@@ -28,24 +29,7 @@ export const WORLD_ICONS = Object.freeze({
     <path d="M9 29C2 16 14 6 32 5c1 14-4 27-18 27Z" fill="#b7c8b2" stroke="#607e68"/>
     <path d="M6 35c7-9 13-17 22-25m-12 14 8-1m-8 1-1-7" stroke="#607e68"/>
   `,art:`${pine(36,37,.78)}${pine(63,10,1.24)}${pine(91,34,.88)}`}),
-  ocean: Object.freeze({color:'#719fbd',header:`
-    <path d="M4 29c9-2 11-15 19-19 7-3 13 1 11 7-1 5-8 5-9 1-1-3 3-5 4-2-3-1-2 2 0 2 3 0 3-6-1-6-5-1-7 6-5 11 3 7 8 9 13 6-6 7-17 7-22 3-4 2-8 2-10 1Z" fill="#b1d0e1" stroke="#608fac"/>
-    <path d="M7 29c6-2 11-8 13-14" stroke="#f5fafc" stroke-width="1.4"/>
-  `,art:`
-    <g data-wave="crest">
-      <path d="M12 63C28 60 39 37 54 26c12-10 29-10 34 0 5 9-1 20-9 17-5-2-6-8-2-10 3-2 6 1 4 3-2-2-4 0-2 2 4 3 8-5 3-10-9-8-18 5-22 17-7 18-27 26-48 23Z" fill="#b1d0e1" stroke="#608fac" stroke-width="1.75"/>
-      <path d="M15 61c20-7 29-34 47-37 11-3 20 1 21 8M15 66c21-3 33-20 40-29" stroke="#709fbe" stroke-width="2"/>
-      <path d="M18 69c21-3 35-15 41-29 1 16 12 27 27 23" stroke="#fff" stroke-width="2.5"/>
-    </g>
-    <g data-wave="right-curl">
-      <path d="M49 72c18-3 22-20 33-25 10-5 19 0 17 7-1 6-8 9-12 4-3-4 2-8 4-5-3 0-2 4 0 3 4-1 4-6 0-7-7-3-11 5-10 11 2 13 15 20 25 12 7-6 3-14-2-13-4 1-3 6 0 5-2-2 2-3 3-1 4 7-10 15-16 15-13 6-30 3-42-1Z" fill="#a2c5dc" stroke="#6797b6" stroke-width="1.65"/>
-      <path d="M54 73c12-3 18-14 22-18m-3 9c6 13 21 20 34 9" stroke="#f9fcfd" stroke-width="2.2"/>
-    </g>
-    <g data-wave="front-curl">
-      <path d="M14 82c18 2 28-14 40-12 12 0 15 13 7 20-6 6-17 4-17-3 0-5 6-8 9-4 2 3-2 6-4 3 0 4 7 3 9-1 4-8-7-11-15-6-12 8-21 9-29 7" fill="#a9cbdc" stroke="#608fae" stroke-width="1.8"/>
-      <path d="M16 83c16 0 27-11 37-9m12 13c11 7 25 3 33 0" stroke="#f8fcfe" stroke-width="1.8"/>
-    </g>
-  `}),
+  ocean: OCEAN_ICON,
   snow: Object.freeze({color:'#a09ac3',header:`
     <path d="m20 5-.2 30M7 12l26 16M33 12 7 28" stroke="#8882b0"/>
     <path d="m16 8 4 4 4-4m-8 24 4-4 4 4M8 18l6-2-1-6m14 20-1-6 6-2M8 22l6 2-1 6m14-20-1 6 6 2" stroke="#8882b0" stroke-width="1.3"/>

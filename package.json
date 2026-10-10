@@ -7,6 +7,7 @@
     "test:ui": "node scripts/verify-mobile.mjs",
     "test:settings": "node scripts/verify-settings.mjs",
     "test:icons": "node scripts/verify-icons.mjs",
+    "test:ocean": "node scripts/verify-ocean.mjs",
     "test:audio": "node scripts/verify-fire-regions.mjs",
     "test:browser-audio": "node scripts/verify-fire-browser.mjs",
     "test:spectral": "python3 scripts/verify-fire-regions.py test-results/fire-regions"
