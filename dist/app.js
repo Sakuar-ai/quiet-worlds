@@ -1,7 +1,7 @@
 import { FireplaceRenderer } from './fireplace.js?v=phase2a-12';
 import { FireplaceAudio, prepareFireRecording } from './fireplace-audio.js?v=fireplace-14';
-import { worldIcon } from './world-icons.js?v=ocean-21';
-import { drawOceanWorld } from './ocean.js?v=ocean-21';
+import { worldIcon } from './world-icons.js?v=ocean-22';
+import { drawOceanWorld } from './ocean.js?v=ocean-22';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;

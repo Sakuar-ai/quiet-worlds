@@ -31,7 +31,7 @@ try{
     await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(150);
     const rain=await rects(page);
     await page.locator('#scene-trigger').click();await page.locator('[data-world="ocean"]').click();
-    await page.evaluate(async()=>{const module=await import('./ocean.js?v=ocean-21');await module.oceanAssetsReady();await document.fonts.ready;});
+    await page.evaluate(async()=>{const module=await import('./ocean.js?v=ocean-22');await module.oceanAssetsReady();await document.fonts.ready;});
     await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important}'});
     await page.waitForTimeout(150);
     const oceanRects=await rects(page);
@@ -48,6 +48,8 @@ try{
       assert.ok(Math.abs(state.parameters.intensity-intensity)<.001,'smoothly settles at target, not an instant state swap');
       assert.equal(state.parameters.horizonFraction,.5,'horizon stays fixed for every intensity');
       assert.equal(state.parameters.boatFractionX,.72,'boat identity and placement stay fixed');
+      assert.equal(state.parameters.motionModel,'travelling-control-points');
+      assert.equal(new Set(state.parameters.wavelengths).size,3,'three distinct spatial rhythms');
       assert.equal(await page.locator('.ocean-subtitle').innerText(),'Calm → Waves');
       assert.equal(await page.locator('#intensity-description').innerText(),['Calm','Light ripple','Gentle waves','Rolling waves','Lively waves'][Math.round(intensity*4)]);
       const inkFraction=await page.locator('#scene-canvas').evaluate(c=>{const pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let blue=0;for(let n=0;n<pixels.length;n+=4)if(pixels[n+3]>100&&pixels[n]<230&&pixels[n+2]-pixels[n]>12)blue++;return blue/(c.width*c.height);});
@@ -93,13 +95,23 @@ try{
   const live=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,recordVideo:{dir:out+'/motion',size:{width:390,height:844}}});
   await live.goto(`http://127.0.0.1:${server.address().port}/`);
   await live.locator('#scene-trigger').click();await live.locator('[data-world="ocean"]').click();
-  await live.evaluate(async()=>{await (await import('./ocean.js?v=ocean-21')).oceanAssetsReady();await document.fonts.ready;});
+  await live.evaluate(async()=>{await (await import('./ocean.js?v=ocean-22')).oceanAssetsReady();await document.fonts.ready;});
   const cadence=await live.evaluate(async()=>{
     const frames=[],start=performance.now(),input=document.querySelector('#intensity-slider');let last;
     await new Promise(done=>{function watch(now){if(last)frames.push(now-last);last=now;const t=(now-start)/1000;input.value=t<2?0:t<5?(t-2)/3*1000:t<7?1000:(1-(t-7)/3)*1000;input.dispatchEvent(new Event('input',{bubbles:true}));if(t<10)requestAnimationFrame(watch);else done();}requestAnimationFrame(watch);});
     frames.sort((a,b)=>a-b);return{frameCount:frames.length,medianIntervalMs:frames[Math.floor(frames.length*.5)],p95IntervalMs:frames[Math.floor(frames.length*.95)],over50ms:frames.filter(v=>v>50).length};
   });
   report.push({actualRAF:cadence,engine,scope:'Browser emulation on CI, not physical iPhone certification'});await live.close();
+  // The requested motion-reference test: 10 seconds without pigment, foam,
+  // paper grain, or scene decoration. It uses the SAME control geometry.
+  const silhouette=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,recordVideo:{dir:out+'/silhouette-motion',size:{width:390,height:844}}});
+  await silhouette.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:app.replace('drawOceanWorld(ctx,w,h,t,this.scene.intensity)','drawOceanWorld(ctx,w,h,t,this.scene.intensity,{silhouette:true})')}));
+  await silhouette.goto(`http://127.0.0.1:${server.address().port}/`);
+  await silhouette.locator('#scene-trigger').click();await silhouette.locator('[data-world="ocean"]').click();
+  await silhouette.locator('#intensity-slider').fill('500');
+  await silhouette.evaluate(async()=>{await (await import('./ocean.js?v=ocean-22')).oceanAssetsReady();});
+  for(let n=0;n<4;n++){await silhouette.screenshot({path:`${out}/silhouette-${n*3}s.png`});await silhouette.waitForTimeout(n===3?1000:3000);}
+  await silhouette.close();report.push({silhouetteMotionSeconds:10,pigment:false,foam:false,wholeBandTransforms:false});
   const review=await browser.newPage({viewport:{width:1250,height:590},deviceScaleFactor:1});
   await review.setContent('<style>body{margin:0;padding:15px;display:flex;gap:12px;background:#fbfbfc;font:14px system-ui;color:#648ea9}figure{margin:0;width:234px;text-align:center}img{width:234px;border:1px solid #e3e9ed;border-radius:16px}figcaption{margin:10px}</style>'+shots.map(({intensity,png},n)=>`<figure><img src="data:image/png;base64,${png}"><figcaption>${['Calm','Light ripple','Gentle waves','Rolling waves','Lively waves'][n]} · ${intensity*100}%</figcaption></figure>`).join(''));
   await review.screenshot({path:`${out}/five-stages.png`});await review.close();

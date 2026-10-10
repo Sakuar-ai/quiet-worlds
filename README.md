@@ -1,5 +1,11 @@
 # Quiet Worlds
 
+## Ocean travelling water field — ocean-22
+
+Replaces whole-strip bobbing/scaling with 113 spatially phase-offset control points per depth layer. The approved pencil wave silhouettes are sampled once into periodic profiles. Time advances the profiles horizontally through the field; neighboring points never peak simultaneously. Individual crests develop near the center and relax toward the edges. Rear/middle/front use distinct propagation speeds, wavelengths and phases. Intensity eases amplitude, wavelength, local forward lean and foam visibility without resetting time.
+
+Reference pigment is advected through the local control mesh, not drawn as three moving rectangles. White foam is separated at initialization and independently follows local crest development/fall. The fixed sky, boat and horizon stay unchanged. One shared production RAF, cached profiles/pigment and no per-frame DOM/layout work. No audio or other-world changes. QA includes a ten-second grayscale silhouette-only recording with texture, grain, foam and decoration disabled, plus normal five-stage mobile screenshots and Chromium/WebKit frame-cost checks. Ocean21's assets below are reused; no new art was generated for this motion pass.
+
 ## Ocean faithful reference-board translation — ocean-21
 
 The approved five-stage board is now the primary visual guide. A colored-pencil calm plate restores the stable sky, small clouds/birds, distant sailboat, horizontal horizon and textured sea. Three transparent rear/middle/front water strips evolve continuously over it: Calm → Light ripple → Gentle waves → Rolling waves → Lively waves. No whole-scene image swaps. Ocean adds the requested “Calm → Waves” subtitle and a bundled hand-lettered title font; the existing wave header and shell marker retain their identities. The app base remains neutral white, with only the reference’s faint local peach tone in the sky.
