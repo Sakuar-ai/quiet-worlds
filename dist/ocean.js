@@ -101,8 +101,13 @@ class OceanRenderer {
       // The pigment tile joins at equal edge values; travelling crests must
       // not reveal a rectangular wrap seam when crossing the viewport.
       for(let x=0;x<32;x++)for(let y=0;y<body.height;y++)for(let channel=0;channel<4;channel++){
-        const left=(y*body.width+x)*4+channel,right=(y*body.width+body.width-1-x)*4+channel,mix=.5*(1-x/32);
-        original.data[left]=raw[left]*(1-mix)+raw[right]*mix;original.data[right]=raw[right]*(1-mix)+raw[left]*mix;
+        const left=(y*body.width+x)*4+channel,right=(y*body.width+body.width-1-x)*4+channel;
+        const a=(y*body.width+48)*4,b=(y*body.width+body.width-49)*4,alpha=(raw[a+3]+raw[b+3])/2,edge=1-x/32;
+        const common=channel===3?alpha:(raw[a+channel]*raw[a+3]+raw[b+channel]*raw[b+3])/Math.max(1,raw[a+3]+raw[b+3]);
+        for(const index of [left,right]){
+          const originalAlpha=raw[index-channel+3],nextAlpha=originalAlpha*(1-edge)+alpha*edge;
+          original.data[index]=channel===3?nextAlpha:(raw[index]*originalAlpha*(1-edge)+common*alpha*edge)/Math.max(1,nextAlpha);
+        }
       }
       b.putImageData(original,0,0);
       const paint=b.getImageData(0,0,body.width,body.height),white=f.createImageData(body.width,body.height),tops=new Float32Array(body.width);
@@ -176,7 +181,7 @@ class OceanRenderer {
         };
         paint(surface.body,presence);
         // Developing crest -> more foam. Falling crest -> broken/faded foam.
-        paint(surface.foam,presence*p.foamActivity*(.28+.72*a.crest)*a.growth);
+        paint(surface.foam,presence*Math.sqrt(p.foamActivity)*(.45+.55*a.crest)*(.55+.45*a.growth));
       }
       ctx.globalAlpha=1;
     }
