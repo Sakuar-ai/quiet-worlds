@@ -3,6 +3,7 @@
 const BODY='M3 157C34 159 54 134 68 102C80 72 91 46 119 41C147 33 174 42 183 56C194 73 180 84 164 77C149 79 139 98 146 119C158 148 189 158 230 153C245 167 223 183 190 186C126 190 61 177 4 177Z';
 const FOAM='M62 114C71 96 76 76 87 62C84 52 95 42 104 46C108 34 124 34 132 41C144 34 159 38 164 46C179 42 195 57 186 71C182 80 172 80 166 74C163 81 155 81 153 72C146 77 139 71 140 65C132 68 131 75 127 79C121 85 115 80 118 72C108 79 102 88 99 95C95 102 87 102 87 94C79 104 74 116 68 120Z';
 const FLOW='M30 155C59 151 75 118 84 94M48 165C79 156 91 124 96 113M103 97C101 132 119 155 145 165M130 113C136 147 163 169 207 166';
+const CONTOUR='M3 157C34 159 54 134 68 102C80 72 91 46 119 41C147 33 174 42 183 56C194 73 180 84 164 77C149 79 139 98 146 119C158 148 189 158 230 153';
 const INK='#648ea9',BLUE='#94bad0',PALE='#c6dce7',FOAM_INK='#86afc6';
 const svgWave=(fill=BLUE)=>`<path d="${BODY}" fill="${fill}" stroke="${INK}" stroke-width="2"/><path d="${FOAM}" fill="#fff" stroke="${FOAM_INK}" stroke-width="1.6"/><path d="${FLOW}" fill="none" stroke="${INK}" stroke-width="1.8" opacity=".65"/>`;
 export const OCEAN_ICON=Object.freeze({color:'#719fbd',header:`
@@ -11,10 +12,10 @@ export const OCEAN_ICON=Object.freeze({color:'#719fbd',header:`
 
 export function oceanParameters(intensity){
   const i=Math.max(0,Math.min(1,Number.isFinite(intensity)?intensity:0));
-  return {intensity:i,crestHeight:.025+.83*i*i,motion:.4+3.8*i,pace:.28+.25*i,rearOpacity:.25+.55*i,foamActivity:Math.max(0,(i-.18)/.82)};
+  return {intensity:i,crestHeight:.025+.83*Math.pow(i,1.6),motion:.4+3.8*i,pace:.28+.25*i,rearOpacity:.25+.55*i,foamActivity:Math.max(0,(i-.18)/.82)};
 }
 let shapes;
-function geometry(){return shapes??=Object.fromEntries(Object.entries({body:BODY,foam:FOAM,flow:FLOW}).map(([k,d])=>[k,new Path2D(d)]));}
+function geometry(){return shapes??=Object.fromEntries(Object.entries({body:BODY,foam:FOAM,flow:FLOW,contour:CONTOUR}).map(([k,d])=>[k,new Path2D(d)]));}
 const patterns=new WeakMap();
 function pigment(ctx){
   if(patterns.has(ctx))return patterns.get(ctx);
@@ -31,11 +32,12 @@ function stroke(ctx,path,color,width=1.4,alpha=1){ctx.save();ctx.globalAlpha*=al
 function wave(ctx,x,base,sx,sy,fill,alpha,grain){
   const g=geometry();ctx.save();ctx.translate(x,base);ctx.scale(sx,sy);ctx.translate(0,-190);ctx.globalAlpha*=alpha;
   ctx.fillStyle=fill;ctx.fill(g.body);ctx.fillStyle=grain;ctx.fill(g.body);
-  stroke(ctx,g.body,INK,1.65,.8);
+  // Draw only the open crest: a closed outline made each wave look like a sticker.
+  stroke(ctx,g.contour,INK,1.65,.7);
   ctx.fillStyle='#ffffff';ctx.fill(g.foam);stroke(ctx,g.foam,FOAM_INK,1.45,.85);
   stroke(ctx,g.flow,INK,1.4,.53);
   // A sparse second pencil trace keeps the contour human, never a thick outline.
-  ctx.translate(.65,-.45);stroke(ctx,g.body,INK,.6,.2);ctx.restore();
+  ctx.translate(.65,-.45);stroke(ctx,g.contour,INK,.6,.2);ctx.restore();
 }
 export function drawOceanWorld(ctx,w,h,t,intensity){
   const p=oceanParameters(intensity),s=w/360,H=h/s,grain=pigment(ctx);
@@ -47,7 +49,7 @@ export function drawOceanWorld(ctx,w,h,t,intensity){
     ctx.save();ctx.translate(x+Math.sin(t*.08)*1.3,y);ctx.scale(k,k);
     ctx.fillStyle='#eef5f8';ctx.fill(cloud);stroke(ctx,cloud,'#b5d4e3',1.3,.85);
     ctx.clip(cloud);ctx.fillStyle=grain;ctx.fillRect(0,0,80,33);
-    for(let n=0;n<13;n++)stroke(ctx,new Path2D(`M${n*6-2} 30l14 -19`),'#bfdce9',.8,.55);
+    for(let n=0;n<58;n++){const x=n*17.317%80,y=n*13.713%31;stroke(ctx,new Path2D(`M${x} ${y}l${3+n%5} ${-3-n%4}`),'#bfdce9',.55+n%3*.2,.55);}
     ctx.restore();
   }
   for(const [x,y,k] of [[278,horizon*.22,1],[173,horizon*.55,.82],[104,horizon*.79,.7]]){
@@ -73,7 +75,8 @@ export function drawOceanWorld(ctx,w,h,t,intensity){
     for(let col=0;col<3;col++){
       const phase=t*p.pace+row*1.9+col*2.5;
       const x=-52+col*150+(row%2)*-52+Math.sin(phase)*p.motion;
-      wave(ctx,x,base+Math.sin(phase*.8)*p.motion*.43,size,height*(.93+Math.sin(phase)*.07),[PALE,'#a3c9dc','#92bdd4'][row],alpha,grain);
+      const variation=.84+.18*Math.sin(col*2.3+row*1.7);
+      wave(ctx,x,base+Math.sin(col*1.8+row)*8*p.intensity+Math.sin(phase*.8)*p.motion*.43,size*(.95+.06*Math.cos(col*2+row)),height*variation*(.96+Math.sin(phase)*.04),[PALE,'#a3c9dc','#92bdd4'][row],alpha,grain);
     }
     const y=base+4;
     stroke(ctx,new Path2D(`M-8 ${y}C36 ${y+5} 66 ${y-10} 106 ${y-1}S182 ${y+8} 226 ${y-2}S309 ${y-7} 368 ${y}`),'#fff',1.1+p.foamActivity*2.2,.45+.25*p.intensity);
