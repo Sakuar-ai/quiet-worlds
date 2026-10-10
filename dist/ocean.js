@@ -42,8 +42,8 @@ function loadAssets(){
   if(assets)return assets;
   const make=path=>{const image=new Image();image.decoding='async';image.src=new URL(path,import.meta.url);return image;};
   const background=make(OCEAN_ASSETS.background),pigment=make(OCEAN_ASSETS.pigment);
-  const ready=Promise.all([background.decode(),pigment.decode()]);
-  assets={background,pigment,ready};ready.catch(()=>{});return assets;
+  const ready=Promise.all([background.decode(),pigment.decode()]).then(()=>{assets.decoded=true;});
+  assets={background,pigment,ready,decoded:false};ready.catch(()=>{});return assets;
 }
 export function oceanAssetsReady(){return loadAssets().ready;}
 const RHYTHMS=Object.freeze([
@@ -65,7 +65,7 @@ export function oceanFieldPoint(p,phase,layer,x,w,h,sample){
   const lean=amplitude*p.curl*crest*.34;
   return {x:x+lean,y:h*.5+depth*r.base-amplitude*profile,crest,amplitude,angle,wavelength,u,profile,growth};
 }
-const POINT_COUNT=113;
+const POINT_COUNT=193;
 function outline(ctx,points,start=0,end=points.length-1){
   ctx.moveTo(points[start].x,points[start].y);
   for(let n=start+1;n<=end;n++){
@@ -139,7 +139,7 @@ class OceanRenderer {
       for(let x=0;x<tops.length;x++){let sum=0;for(let k=-6;k<=6;k++)sum+=tops[(x+k+tops.length)%tops.length];smoothed[x]=sum/13;}
       b.putImageData(paint,0,0);f.putImageData(white,0,0);
       const sample=u=>{const x=u*body.width,k=Math.floor(x)%body.width,next=(k+1)%body.width;return smoothed[k]+(smoothed[next]-smoothed[k])*(x-Math.floor(x));};
-      return {body,foam,sample};
+      return {body,foam,sample,range:Math.max(...smoothed)-Math.min(...smoothed)};
     });
     this.ripples=new Path2D();
     for(let n=0;n<22;n++){
@@ -150,7 +150,7 @@ class OceanRenderer {
   }
   draw(ctx,w,h,time,target,options={}){
     const p=this.motion.update(time,target),{background,pigment}=this.images;
-    if(!background.complete||!background.naturalWidth||!pigment.complete||!pigment.naturalWidth)return {...p,assetsReady:false};
+    if(!this.images.decoded)return {...p,assetsReady:false};
     this.prepare(ctx,w,h);
     if(options.silhouette){ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);}else ctx.drawImage(this.cache,0,0,w,h);
     const horizon=h*.50,depth=h*.47;
@@ -171,7 +171,7 @@ class OceanRenderer {
         const sx=a.u*surface.body.width,sw=step*surface.body.width;
         const base=horizon+depth*RHYTHMS[n].base;
         const scale=(base-a.y)/(surface.body.height*a.profile);
-        const height=surface.body.height*scale,x=a.x,width=Math.max(.5,b.x-a.x)+.35;
+        const height=surface.body.height*scale,x=a.x,width=Math.max(.5,b.x-a.x)+.08;
         if(height<.1)continue;
         const paint=(image,alpha)=>{
           ctx.globalAlpha=alpha;
@@ -190,7 +190,7 @@ class OceanRenderer {
     ctx.strokeStyle='#fff';ctx.lineWidth=.85;ctx.stroke(this.ripples);ctx.restore();
     ctx.fillStyle=this.fade;ctx.fillRect(0,h*.92,w,h*.08);
     }ctx.restore();
-    return {...p,assetsReady:true,horizonFraction:.50,boatFractionX:.72,activeWaveLayers:3,motionModel:'travelling-control-points',phases:[...this.motion.phase],wavelengths:RHYTHMS.map(r=>w*(r.wavelength-r.shorten*p.intensity))};
+    return {...p,assetsReady:true,horizonFraction:.50,boatFractionX:.72,activeWaveLayers:3,motionModel:'travelling-control-points',phases:[...this.motion.phase],wavelengths:RHYTHMS.map(r=>w*(r.wavelength-r.shorten*p.intensity)),profileRanges:this.surfaces.map(s=>s.range)};
   }
 }
 const renderers=new WeakMap();

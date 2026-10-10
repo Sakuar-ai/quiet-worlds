@@ -49,6 +49,7 @@ try{
       assert.equal(state.parameters.horizonFraction,.5,'horizon stays fixed for every intensity');
       assert.equal(state.parameters.boatFractionX,.72,'boat identity and placement stay fixed');
       assert.equal(state.parameters.motionModel,'travelling-control-points');
+      assert.ok(state.parameters.profileRanges.every(range=>range>.08),'decoded pencil contours must have real spatial variation');
       assert.equal(new Set(state.parameters.wavelengths).size,3,'three distinct spatial rhythms');
       assert.equal(await page.locator('.ocean-subtitle').innerText(),'Calm → Waves');
       assert.equal(await page.locator('#intensity-description').innerText(),['Calm','Light ripple','Gentle waves','Rolling waves','Lively waves'][Math.round(intensity*4)]);
@@ -105,12 +106,19 @@ try{
   // The requested motion-reference test: 10 seconds without pigment, foam,
   // paper grain, or scene decoration. It uses the SAME control geometry.
   const silhouette=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,recordVideo:{dir:out+'/silhouette-motion',size:{width:390,height:844}}});
-  await silhouette.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:app.replace('drawOceanWorld(ctx,w,h,t,this.scene.intensity)','drawOceanWorld(ctx,w,h,t,this.scene.intensity,{silhouette:true})')}));
+  await silhouette.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:app.replace('drawOceanWorld(ctx,w,h,t,this.scene.intensity)','drawOceanWorld(ctx,w,h,t,this.scene.intensity,{silhouette:true})')+'\nwindow.__silhouetteQA=renderer;'}));
   await silhouette.goto(`http://127.0.0.1:${server.address().port}/`);
   await silhouette.locator('#scene-trigger').click();await silhouette.locator('[data-world="ocean"]').click();
   await silhouette.locator('#intensity-slider').fill('500');
   await silhouette.evaluate(async()=>{await (await import('./ocean.js?v=ocean-22')).oceanAssetsReady();});
-  for(let n=0;n<4;n++){await silhouette.screenshot({path:`${out}/silhouette-${n*3}s.png`});await silhouette.waitForTimeout(n===3?1000:3000);}
+  await silhouette.waitForFunction(()=>window.__silhouetteQA.oceanState?.assetsReady);
+  assert.ok((await silhouette.evaluate(()=>window.__silhouetteQA.oceanState.profileRanges)).every(range=>range>.08),'live silhouette never caches an undecoded/flat contour');
+  let previousSilhouette;
+  for(let n=0;n<4;n++){
+    const pixels=await silhouette.locator('#scene-canvas').evaluate(c=>c.toDataURL());
+    if(previousSilhouette)assert.notEqual(pixels,previousSilhouette,'silhouette itself evolves without texture/foam');previousSilhouette=pixels;
+    await silhouette.screenshot({path:`${out}/silhouette-${n*3}s.png`});await silhouette.waitForTimeout(n===3?1000:3000);
+  }
   await silhouette.close();report.push({silhouetteMotionSeconds:10,pigment:false,foam:false,wholeBandTransforms:false});
   const review=await browser.newPage({viewport:{width:1250,height:590},deviceScaleFactor:1});
   await review.setContent('<style>body{margin:0;padding:15px;display:flex;gap:12px;background:#fbfbfc;font:14px system-ui;color:#648ea9}figure{margin:0;width:234px;text-align:center}img{width:234px;border:1px solid #e3e9ed;border-radius:16px}figcaption{margin:10px}</style>'+shots.map(({intensity,png},n)=>`<figure><img src="data:image/png;base64,${png}"><figcaption>${['Calm','Light ripple','Gentle waves','Rolling waves','Lively waves'][n]} · ${intensity*100}%</figcaption></figure>`).join(''));
