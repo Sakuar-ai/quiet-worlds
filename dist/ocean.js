@@ -10,90 +10,115 @@ export const OCEAN_ICON=Object.freeze({color:'#719fbd',header:`
   <path d="M2 25C8 28 12 17 18 17C22 17 23 21 20 21C17 21 17 27 22 27C28 27 29 20 34 20C38 20 37 22 35 23C32 27 37 27 39 25" fill="none" stroke="${INK}" stroke-width="1.8"/>
 `,art:`<g data-wave="rear" transform="translate(51 4) scale(.27 .25)">${svgWave(PALE)}</g><g data-wave="main" transform="translate(4 5) scale(.4 .37)">${svgWave()}</g><g data-wave="front" transform="translate(57 39) scale(.26 .23)">${svgWave('#accddd')}</g>`});
 
-export function oceanParameters(intensity){
-  const i=Math.max(0,Math.min(1,Number.isFinite(intensity)?intensity:0));
-  return {intensity:i,crestHeight:.025+.83*Math.pow(i,1.6),motion:.4+3.8*i,pace:.28+.25*i,rearOpacity:.25+.55*i,foamActivity:Math.max(0,(i-.18)/.82)};
+// Three continuous water bands, driven by the app's one existing RAF.
+const clamp=v=>Math.max(0,Math.min(1,Number.isFinite(v)?v:0));
+export function oceanParameters(value){
+  const i=clamp(value);
+  return {intensity:i,crestHeight:.075+.925*i,motion:.35+1.75*i,pace:.19+.15*i,curl:.22+.78*i,foamActivity:.06+.94*i,layerPresence:.42+.58*i};
 }
-let shapes;
-function geometry(){return shapes??=Object.fromEntries(Object.entries({body:BODY,foam:FOAM,flow:FLOW,contour:CONTOUR}).map(([k,d])=>[k,new Path2D(d)]));}
+export class OceanMotion {
+  constructor(){this.last=null;this.intensity=null;this.phase=[.4,2.7,4.5];this.parameters=oceanParameters(0);}
+  update(time,target){
+    target=clamp(target);
+    const dt=this.last===null?0:Math.max(0,Math.min(.05,time-this.last));this.last=time;
+    if(this.intensity===null)this.intensity=target;
+    else this.intensity+=(target-this.intensity)*-Math.expm1(-dt/.62);
+    const p=oceanParameters(this.intensity);
+    // Integrate speed; slider changes never rewrite elapsed phase.
+    for(let n=0;n<3;n++)this.phase[n]+=dt*p.pace*[.79,1.07,.91][n];
+    this.parameters=p;return p;
+  }
+}
+// Three different asymmetrical drawings, not a repeated wave stamp. Parse once.
+const DRAWINGS=[
+  {
+    base:166,scale:.66,color:'#c2dce9',center:151,
+    edge:'M-18 183C19 181 48 169 77 138C96 117 105 86 130 77C153 65 177 71 182 87C188 103 174 113 163 108C157 106 157 100 162 97C153 90 142 102 146 121C152 149 177 171 209 175C245 181 262 163 279 146C294 132 309 126 325 132C340 138 342 150 333 155C324 158 318 152 322 146C310 149 313 165 332 173C350 181 364 177 384 170',
+    foam:'M66 150C88 128 102 91 125 80C149 65 177 67 184 84C191 98 179 113 167 109C159 107 159 101 164 98C171 98 176 94 172 90C168 88 164 93 160 88C156 92 150 83 146 89C139 86 132 91 130 97C126 103 121 103 119 100C111 106 109 117 103 119C98 122 99 115 95 122C89 136 82 134 79 143C75 150 69 155 66 150Z',
+    flow:'M42 167C77 154 98 117 112 103M108 131C110 151 124 169 147 178M149 129C162 158 185 170 209 171M251 173C270 166 281 148 297 140'
+  },
+  {
+    base:237,scale:.85,color:'#9ec9de',center:259,
+    edge:'M-18 176C12 179 36 163 52 147C68 132 84 130 96 140C107 150 99 161 89 159C84 158 84 152 88 150C78 147 74 164 91 173C123 186 153 168 176 131C195 102 207 56 238 44C266 32 295 47 293 67C292 87 271 96 259 85C250 75 257 67 264 68C269 69 270 75 266 78C280 75 276 58 261 61C242 64 239 92 248 119C261 159 307 179 384 165',
+    foam:'M167 145C193 114 201 65 231 47C255 31 285 39 293 55C304 72 287 94 271 90C260 90 251 83 255 75C257 71 263 69 266 73C261 76 266 81 271 79C283 76 284 60 274 57C269 54 268 60 263 56C256 61 253 52 247 58C240 54 237 65 231 64C224 63 223 78 218 76C211 75 213 89 205 91C199 95 201 104 195 107C189 110 192 119 184 124C179 130 173 145 167 145Z',
+    flow:'M120 180C168 174 190 125 203 104M214 112C213 144 237 171 259 179M242 120C258 158 288 169 319 173M12 174C37 170 51 150 66 144'
+  },
+  {
+    base:315,scale:1,color:'#80b5d1',center:136,
+    edge:'M-18 183C17 184 39 162 56 132C72 104 83 62 112 48C137 35 164 48 166 68C168 88 147 98 134 87C126 79 130 70 138 70C146 71 146 79 140 80C154 85 158 65 144 61C127 54 115 76 116 97C120 135 151 170 199 176C233 181 260 158 278 136C294 114 314 105 332 115C347 124 343 141 330 141C321 140 321 134 326 129C311 128 312 149 329 160C344 172 365 175 384 171',
+    foam:'M47 148C66 119 81 65 109 49C135 33 162 43 169 61C179 83 158 103 141 94C132 91 125 83 131 77C134 75 137 76 138 79C134 84 141 89 147 87C159 84 163 66 153 61C149 57 145 61 141 58C135 62 131 53 125 60C119 57 115 67 110 66C104 64 102 78 97 77C91 76 92 91 86 94C81 97 83 107 76 110C70 114 72 123 67 126C60 133 56 146 47 148Z',
+    flow:'M7 177C47 164 65 123 80 98M91 117C93 146 116 169 139 178M117 122C135 152 164 169 196 169M246 175C267 166 283 137 302 126M312 147C320 165 344 177 365 177'
+  }
+];
+function compile(d){
+  const tokens=d.match(/[MCZ]|-?\\d*\\.?\\d+/g),out=[];
+  for(let i=0;i<tokens.length;){const op=tokens[i++],count=op==='C'?6:op==='M'?2:0;out.push([op,...tokens.slice(i,i+count).map(Number)]);i+=count;}
+  return out;
+}
+for(const d of DRAWINGS)for(const key of ['edge','foam','flow'])d[key]=compile(d[key]);
 const patterns=new WeakMap();
-function pigment(ctx){
+function pencil(ctx){
   if(patterns.has(ctx))return patterns.get(ctx);
-  const tile=ctx.canvas.ownerDocument.createElement('canvas');tile.width=72;tile.height=72;
+  const tile=ctx.canvas.ownerDocument.createElement('canvas');tile.width=128;tile.height=128;
   const p=tile.getContext('2d');p.lineCap='round';
-  for(let n=0;n<180;n++){
-    const x=(n*17.173)%72,y=(n*31.719)%72;
-    p.strokeStyle=n%3?'rgba(255,255,255,.24)':'rgba(93,140,169,.09)';p.lineWidth=.35+n%3*.23;
-    p.beginPath();p.moveTo(x,y);p.lineTo(x+1+n%4,y-1-n%3);p.stroke();
+  for(let n=0;n<620;n++){
+    const x=n*37.713%128,y=n*23.173%128;
+    p.strokeStyle=n%5?'rgba(255,255,255,.25)':'rgba(66,126,161,.11)';p.lineWidth=.35+n%3*.35;
+    p.beginPath();p.moveTo(x,y);p.lineTo(x+1+n%5,y-1-n%4);p.stroke();
   }
   const pattern=ctx.createPattern(tile,'repeat');patterns.set(ctx,pattern);return pattern;
 }
-function stroke(ctx,path,color,width=1.4,alpha=1){ctx.save();ctx.globalAlpha*=alpha;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke(path);ctx.restore();}
-function wave(ctx,x,base,sx,sy,fill,alpha,grain){
-  const g=geometry();ctx.save();ctx.translate(x,base);ctx.scale(sx,sy);ctx.translate(0,-190);ctx.globalAlpha*=alpha;
-  ctx.fillStyle=fill;ctx.fill(g.body);ctx.fillStyle=grain;ctx.fill(g.body);
-  // Draw only the open crest: a closed outline made each wave look like a sticker.
-  stroke(ctx,g.contour,INK,1.65,.7);
-  ctx.fillStyle='#ffffff';ctx.fill(g.foam);stroke(ctx,g.foam,FOAM_INK,1.45,.85);
-  stroke(ctx,g.flow,INK,1.4,.53);
-  // A sparse second pencil trace keeps the contour human, never a thick outline.
-  ctx.translate(.65,-.45);stroke(ctx,g.contour,INK,.6,.2);ctx.restore();
+function trace(ctx,commands,center,curl,crest){
+  // Subtle crest deformation; wave feet stay joined to the water band.
+  const x=(a,b)=>a+(a-center)*(.16*(curl-1))*Math.max(0,1-b/155);
+  const y=(a,b)=>b+crest*Math.max(0,1-b/175)*(1+.15*Math.sin(a*.045));
+  ctx.beginPath();
+  for(const c of commands){
+    if(c[0]==='M')ctx.moveTo(x(c[1],c[2]),y(c[1],c[2]));
+    else if(c[0]==='C')ctx.bezierCurveTo(x(c[1],c[2]),y(c[1],c[2]),x(c[3],c[4]),y(c[3],c[4]),x(c[5],c[6]),y(c[5],c[6]));
+    else ctx.closePath();
+  }
 }
-export function drawOceanWorld(ctx,w,h,t,intensity){
-  const p=oceanParameters(intensity),s=w/360,H=h/s,grain=pigment(ctx);
-  const horizon=H*.45,bottom=H*.97,depth=bottom-horizon;
-  ctx.save();ctx.scale(s,s);ctx.lineCap='round';ctx.lineJoin='round';
-  // White sky; just three pale pencil clouds and three small birds, as in the guide.
-  const cloud=new Path2D('M0 28Q4 18 12 22Q9 8 24 9Q30 -2 39 8Q52 6 52 20Q63 15 65 28Q73 23 80 30L0 30');
-  for(const [x,y,k] of [[-7,horizon*.28,.93],[286,horizon*.5,.94],[9,horizon*.79,.66]]){
-    ctx.save();ctx.translate(x+Math.sin(t*.08)*1.3,y);ctx.scale(k,k);
-    ctx.fillStyle='#eef5f8';ctx.fill(cloud);stroke(ctx,cloud,'#b5d4e3',1.3,.85);
-    ctx.clip(cloud);ctx.fillStyle=grain;ctx.fillRect(0,0,80,33);
-    for(let n=0;n<58;n++){const x=n*17.317%80,y=n*13.713%31;stroke(ctx,new Path2D(`M${x} ${y}l${3+n%5} ${-3-n%4}`),'#bfdce9',.55+n%3*.2,.55);}
-    ctx.restore();
+function ink(ctx,color,width,alpha){ctx.save();ctx.globalAlpha*=alpha;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();ctx.restore();}
+class OceanRenderer {
+  constructor(ctx){
+    this.motion=new OceanMotion();this.grain=pencil(ctx);
+    this.mask=new Path2D('M-16 -10H376V343C326 352 283 344 239 351S140 346 102 351S29 345 -16 349Z');
+    this.ripples=new Path2D('M5 199q17 -3 31 0M66 211q13 2 23 -1M260 207q22 -3 45 -1M320 193q18 3 29 0M22 262q15 -2 25 0M143 255q19 -3 33 -1M304 269q20 -2 32 1M56 329q18 3 34 0M214 334q16 -2 30 0');
+    this.foam=new Path2D('M35 226q5 -3 10 0M143 224q3 -3 6 0M286 229q4 -2 8 0M87 293q5 -3 9 0M271 307q4 -2 7 0M187 328q4 -2 8 0');
+    this.fade=ctx.createLinearGradient(0,328,0,354);this.fade.addColorStop(0,'rgba(251,251,252,0)');this.fade.addColorStop(1,'#fbfbfc');
   }
-  for(const [x,y,k] of [[278,horizon*.22,1],[173,horizon*.55,.82],[104,horizon*.79,.7]]){
-    const wing=Math.sin(t*.55+x)*.6;
-    stroke(ctx,new Path2D(`M${x-7*k} ${y}q${5*k} ${-4*k+wing} ${8*k} ${2*k}q${3*k} ${-8*k} ${9*k} ${-8*k}`),INK,1.4,.85);
-  }
-  // One continuous sea field, not isolated stickers. Ragged pencil edge fades to paper.
-  const sea=new Path2D(`M-2 ${horizon}Q100 ${horizon-1} 180 ${horizon}T362 ${horizon}L362 ${bottom-3}Q300 ${bottom+4} 243 ${bottom-1}T120 ${bottom}T-2 ${bottom-2}Z`);
-  ctx.save();ctx.clip(sea);ctx.fillStyle='#c5deea';ctx.fill(sea);ctx.fillStyle=grain;ctx.fill(sea);
-  // Small broken ripples remain visible at every intensity, with a light reflection lane.
-  for(let n=0;n<66;n++){
-    const d=(n+.5)/66,y=horizon+d*depth,x=(n*83.71)%388-22;
-    const length=13+(n%5)*6,dy=Math.sin(t*p.pace+n*.8)*(1+4*p.intensity)*d;
-    stroke(ctx,new Path2D(`M${x} ${y}q${length*.4} ${-2-dy} ${length} ${-.4+dy}`),n%4===0?'#fff':'#7facbf',n%4===0?2:1,.45);
-    if(n%3===0)stroke(ctx,new Path2D(`M${117+Math.sin(n*3)*20-d*16} ${y+2}q12 -2 ${12+d*36} 0`),'#fff',1.5,.64*(1-p.intensity*.5));
-  }
-  // Back-to-front rows grow continuously: flat water → ripples → rounded foamy waves.
-  // Each row has its own gentle phase; no discrete state swaps or pre-rendered frames.
-  for(let row=0;row<3;row++){
-    const base=horizon+depth*(.28+row*.28),size=.53+row*.22;
-    const height=p.crestHeight*(.4+row*.22)*Math.min(1,depth/225);
-    const alpha=Math.min(1,Math.max(0,(p.intensity-.12)*2.5));
-    for(let col=0;col<3;col++){
-      const phase=t*p.pace+row*1.9+col*2.5;
-      const x=-52+col*150+(row%2)*-52+Math.sin(phase)*p.motion;
-      const variation=.84+.18*Math.sin(col*2.3+row*1.7);
-      wave(ctx,x,base+Math.sin(col*1.8+row)*8*p.intensity+Math.sin(phase*.8)*p.motion*.43,size*(.95+.06*Math.cos(col*2+row)),height*variation*(.96+Math.sin(phase)*.04),[PALE,'#a3c9dc','#92bdd4'][row],alpha,grain);
+  draw(ctx,w,h,time,target){
+    const p=this.motion.update(time,target),s=Math.min(w/360,h*.88/370);
+    ctx.save();ctx.translate((w-360*s)/2,(h-370*s)*.5);ctx.scale(s,s);ctx.clip(this.mask);
+    ctx.lineCap='round';ctx.lineJoin='round';
+    for(let n=0;n<3;n++){
+      const d=DRAWINGS[n],phase=this.motion.phase[n];
+      const sy=d.scale*p.crestHeight*(1+.035*Math.sin(phase*1.17+.8*n));
+      const lift=Math.sin(phase*.83+n)*p.motion,drift=Math.sin(phase*.61+n)*p.motion*.6;
+      const crest=Math.sin(phase*1.29+n)*(.7+2*p.intensity);
+      ctx.save();if(n>0)ctx.globalAlpha*=p.layerPresence;ctx.translate(drift,d.base+lift);ctx.scale(1,sy);ctx.translate(0,-190);
+      trace(ctx,d.edge,d.center,p.curl,crest);
+      ctx.lineTo(390,190+(365-d.base)/sy);ctx.lineTo(-30,190+(365-d.base)/sy);ctx.closePath();
+      ctx.fillStyle=d.color;ctx.fill();ctx.fillStyle=this.grain;ctx.fill();
+      trace(ctx,d.edge,d.center,p.curl,crest);ink(ctx,'#5a94b2',1.2,.7);
+      // Foam follows the curling lip, never a disconnected cloud-like cap.
+      trace(ctx,d.foam,d.center,p.curl,crest);
+      ctx.save();ctx.globalAlpha*=p.foamActivity;ctx.fillStyle='#fff';ctx.fill();ctx.fillStyle=this.grain;ctx.fill();ctx.restore();
+      trace(ctx,d.flow,d.center,p.curl,crest);ink(ctx,'#4e91b4',1,.35+.15*p.intensity);
+      ctx.translate(.45,-.8);trace(ctx,d.edge,d.center,p.curl,crest);ink(ctx,'#609ab7',.7,.22);
+      ctx.restore();
     }
-    const y=base+4;
-    stroke(ctx,new Path2D(`M-8 ${y}C36 ${y+5} 66 ${y-10} 106 ${y-1}S182 ${y+8} 226 ${y-2}S309 ${y-7} 368 ${y}`),'#fff',1.1+p.foamActivity*2.2,.45+.25*p.intensity);
+    ctx.save();ctx.translate(Math.sin(this.motion.phase[1]*.63)*.8,Math.sin(this.motion.phase[0])*.5);
+    ctx.strokeStyle='#f8fcfd';ctx.lineWidth=1.25;ctx.globalAlpha*=.62;ctx.stroke(this.ripples);
+    ctx.globalAlpha*=p.foamActivity;ctx.lineWidth=1.65;ctx.stroke(this.foam);ctx.restore();
+    ctx.fillStyle=this.fade;ctx.fillRect(-16,328,392,30);
+    ctx.restore();return p;
   }
-  // Sparse hand-drawn foam flecks; never a spray or storm particle system.
-  for(let n=0;n<22;n++){
-    const x=(n*73.713)%360,y=horizon+depth*(.23+(n*13.71%70)/100);
-    stroke(ctx,new Path2D(`M${x} ${y}q2 -1.2 4 0`),'#fff',1.2,p.foamActivity*.65);
-  }
-  const edge=ctx.createLinearGradient(0,bottom-10,0,bottom+1);edge.addColorStop(0,'rgba(251,251,252,0)');edge.addColorStop(1,'#fbfbfc');
-  ctx.fillStyle=edge;ctx.fillRect(0,bottom-10,360,12);ctx.restore();
-  // A tiny boat anchors the scale, but never moves into the controls or becomes a focal illustration.
-  ctx.save();ctx.translate(257,horizon-2+Math.sin(t*.55)*(.6+p.intensity));ctx.rotate(Math.sin(t*.5)*(.015+.02*p.intensity));
-  const sail=new Path2D('M0 -34L-12 -5L-1 -6ZM3 -30L12 -5L3 -6Z');
-  ctx.fillStyle='#fff';ctx.fill(sail);stroke(ctx,sail,'#70838d',1.1);
-  stroke(ctx,new Path2D('M1 -35L1 0'),'#70838d',1.1);
-  const hull=new Path2D('M-15 -2Q0 1 15 -2L10 4L-10 4Z');ctx.fillStyle='#bc9b7c';ctx.fill(hull);stroke(ctx,hull,'#927f70',1);
-  ctx.restore();
-  ctx.restore();return p;
+}
+const renderers=new WeakMap();
+export function drawOceanWorld(ctx,w,h,time,intensity){
+  let renderer=renderers.get(ctx);
+  if(!renderer){renderer=new OceanRenderer(ctx);renderers.set(ctx,renderer);}
+  return renderer.draw(ctx,w,h,time,intensity);
 }

@@ -1,5 +1,13 @@
 # Quiet Worlds
 
+## Ocean continuous motion rebuild — ocean-20
+
+Replaces ocean-19's nine repeated crests / decorative landscape with three individually drawn, connected water bands. No boat, birds or clouds. Rounded asymmetric bodies, curling foam lips, a restrained pencil texture and differing rear/middle/front phases carry the scene. The existing wave-line header, shell slider, Rain-based layout, all audio and all other worlds are unchanged.
+
+`OceanMotion` exponentially approaches the requested intensity (0.62 s time constant), then integrates each layer's speed over elapsed time. It never multiplies the total scene age by a changing speed: slider input therefore cannot jump the motion phase. Background-tab gaps are capped; 30/60/120 Hz interpolation is tested. Three reusable path-command sets deform continuously with height, curl and gentle crest breathing. All `Path2D` objects, pigment and gradients are cached at initialization; no per-frame DOM lookup, layout measurement, filters or new nodes. The existing shared scene RAF is the only production animation loop.
+
+`test:ocean` checks five settled intensities, rapid slider motion, zero steady-state path allocations/layout reads and render cost at three portrait sizes. It also records ten seconds of actual RAF playback/dragging. Set `OCEAN_BROWSER=webkit` for WebKit checks. Browser-emulation measurements are not a claim of testing on physical iPhone hardware. The review-only `codex/ocean-rebuild` workflow produces screenshots, video and timing reports before changes are promoted to main.
+
 ## Ocean illustrated wave world — ocean-19
 
 The latest Ocean style guide drives a continuous white-sky / blue-water composition: three quiet pencil clouds, three small birds, a tiny sailboat, and rounded hand-drawn foam crests. `dist/ocean.js` draws live Canvas geometry; intensity continuously progresses through Calm → Light ripple → Gentle waves → Rolling waves → Lively waves. No videos, frame sequences or state-image swaps. The scene uses Rain's existing scene container, control sizes and vertical rhythm. Only Ocean joins those shared style selectors; Rain and Fireplace remain unchanged.

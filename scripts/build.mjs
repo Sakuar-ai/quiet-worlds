@@ -1,6 +1,7 @@
 import {readFileSync, existsSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import assert from 'node:assert/strict';
+import './verify-ocean-motion.mjs';
 
 // This app ships source modules directly; the static build validates the exact
 // deployment directory without rewriting Rain, audio files or other assets.
