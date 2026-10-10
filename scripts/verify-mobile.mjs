@@ -57,6 +57,10 @@ const makePage=async(viewport,old=false)=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   // Freeze only the test animation clock, then render each scene at a known time.
   await page.addInitScript(()=>{window.requestAnimationFrame=()=>1;window.cancelAnimationFrame=()=>{};});
+  // The old stylesheet predates Ocean's new subtitle. Do not insert that
+  // future-only node into the baseline page: without its hiding rule it
+  // incorrectly grows the old Rain canvas during ResizeObserver callbacks.
+  if(old)await page.route(url,r=>r.fulfill({contentType:'text/html',body:readFileSync('dist/index.html','utf8').replace(/\s*<p class="ocean-subtitle">[^<]*<\/p>/,'')}));
   await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:(old?oldApp:app)+'\nwindow.__sceneQA={renderer,setScene,slider,intensityText,pause};'}));
   if(old)await page.route('**/styles.css*',r=>r.fulfill({contentType:'text/css',body:oldCss}));
   if(old)await page.route('**/fireplace.js*',r=>r.fulfill({contentType:'text/javascript',body:oldFire}));
