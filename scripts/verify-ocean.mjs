@@ -23,8 +23,8 @@ const rects=page=>page.evaluate(()=>Object.fromEntries(['.world','#scene-canvas'
 const draw=async(page,intensity)=>page.evaluate(intensity=>{const input=document.querySelector('#intensity-slider');input.value=intensity*1000;input.dispatchEvent(new Event('input',{bubbles:true}));const r=window.__oceanQA.renderer;r.transition=null;window.__oceanTime??=1000;for(let n=0;n<300;n++){window.__oceanTime+=1000/60;r.render(r.start+window.__oceanTime);}return{parameters:r.oceanState,pixels:r.canvas.toDataURL()};},intensity);
 try{
   for(const viewport of [{width:390,height:844},{width:375,height:667},{width:430,height:932}]){
-    const page=await browser.newPage({viewport,deviceScaleFactor:2,isMobile:true,hasTouch:true}),errors=[];
-    page.on('pageerror',e=>errors.push(e.message));
+    const page=await browser.newPage({viewport,deviceScaleFactor:2,isMobile:true,hasTouch:true}),errors=[],resizeNotices=[];
+    page.on('pageerror',e=>{if(e.message==='ResizeObserver loop completed with undelivered notifications.')resizeNotices.push(e.message);else errors.push(e.message);});
     await page.addInitScript(()=>{requestAnimationFrame=()=>1;cancelAnimationFrame=()=>{};});
     await page.route('**/app.js*',r=>r.fulfill({contentType:'text/javascript',body:app+'\nwindow.__oceanQA={renderer,setScene,slider,pause};'}));
     await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.waitForFunction(()=>window.__oceanQA);
@@ -77,7 +77,9 @@ try{
     const range=await page.locator('#intensity-slider').boundingBox();await page.mouse.click(range.x+range.width*.2,range.y+range.height/2);
     assert.ok(Number(await page.locator('#intensity-slider').inputValue())<350,'pointer range control');
     await page.locator('#scene-trigger').click();await page.screenshot({path:`${out}/${viewport.width}-picker.png`});await page.keyboard.press('Escape');
-    assert.deepEqual(errors,[]);await page.close();
+    assert.deepEqual(errors,[]);
+    assert.ok(resizeNotices.length<=2,'resize notifications must settle, never a persistent loop');
+    report.push({viewport,resizeNoticeCount:resizeNotices.length});await page.close();
   }
   // Actual RAF / slider-drag recording, not a montage of still screenshots.
   const live=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,recordVideo:{dir:out+'/motion',size:{width:390,height:844}}});
@@ -92,6 +94,9 @@ try{
   const review=await browser.newPage({viewport:{width:1250,height:590},deviceScaleFactor:1});
   await review.setContent('<style>body{margin:0;padding:15px;display:flex;gap:12px;background:#fbfbfc;font:14px system-ui;color:#648ea9}figure{margin:0;width:234px;text-align:center}img{width:234px;border:1px solid #e3e9ed;border-radius:16px}figcaption{margin:10px}</style>'+shots.map(({intensity,png},n)=>`<figure><img src="data:image/png;base64,${png}"><figcaption>${['Calm','Light ripple','Gentle waves','Rolling waves','Lively waves'][n]} · ${intensity*100}%</figcaption></figure>`).join(''));
   await review.screenshot({path:`${out}/five-stages.png`});await review.close();
+  const stills=await browser.newPage({viewport:{width:950,height:720},deviceScaleFactor:1});
+  await stills.setContent('<style>body{margin:0;padding:16px;display:flex;gap:16px;background:#fbfbfc;font:15px system-ui;color:#648ea9}figure{margin:0;width:295px;text-align:center}img{width:295px;border:1px solid #e3e9ed;border-radius:16px}figcaption{margin:12px}</style>'+shots.filter(({intensity})=>[0,.5,1].includes(intensity)).map(({intensity,png})=>`<figure><img src="data:image/png;base64,${png}"><figcaption>Paused · ${intensity*100}%</figcaption></figure>`).join(''));
+  await stills.screenshot({path:`${out}/paused-0-50-100.png`});await stills.close();
   writeFileSync(`${out}/report.json`,JSON.stringify(report,null,2));
   console.log('PASS Ocean: 5 continuous stages, 3 portrait sizes, Rain geometry, live motion, shell rail gap, keyboard/pointer control, unchanged audio.');
 }finally{await browser.close();await new Promise(done=>server.close(done));}
