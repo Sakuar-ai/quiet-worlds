@@ -14,7 +14,7 @@ export const OCEAN_ICON=Object.freeze({color:'#719fbd',header:`
 const clamp=v=>Math.max(0,Math.min(1,Number.isFinite(v)?v:0));
 export function oceanParameters(value){
   const i=clamp(value);
-  return {intensity:i,crestHeight:.075+.925*i,motion:.35+1.75*i,pace:.19+.15*i,curl:.22+.78*i,foamActivity:.06+.94*i,layerPresence:.42+.58*i};
+  return {intensity:i,crestHeight:.075+.925*Math.pow(i,.8),motion:.35+1.75*i,pace:.19+.15*i,curl:.22+.78*i,foamActivity:.06+.94*Math.sqrt(i),layerPresence:.42+.58*i};
 }
 export class OceanMotion {
   constructor(){this.last=null;this.intensity=null;this.phase=[.4,2.7,4.5];this.parameters=oceanParameters(0);}
@@ -60,6 +60,23 @@ function compile(d){
   return out;
 }
 for(const d of DRAWINGS)for(const key of ['edge','foam','flow'])d[key]=compile(d[key]);
+// A fixed, sparse pencil trace over the filled masses. Never randomize per frame:
+// the same tiny imperfections travel with the drawing, so there is no shimmer.
+function pencilTrace(commands){
+  const points=[];let x=0,y=0,n=0;
+  for(const c of commands){
+    if(c[0]==='M'){x=c[1];y=c[2];points.push([x,y,true]);continue;}
+    if(c[0]!=='C')continue;
+    const steps=Math.max(5,Math.ceil((Math.hypot(c[1]-x,c[2]-y)+Math.hypot(c[3]-c[1],c[4]-c[2])+Math.hypot(c[5]-c[3],c[6]-c[4]))/3));
+    for(let j=1;j<=steps;j++){
+      const t=j/steps,u=1-t,px=u*u*u*x+3*u*u*t*c[1]+3*u*t*t*c[3]+t*t*t*c[5],py=u*u*u*y+3*u*u*t*c[2]+3*u*t*t*c[4]+t*t*t*c[6];
+      n++;points.push([px+Math.sin(n*2.17)*.35,py+Math.sin(n*1.73)*.48,n%29===0]);
+    }
+    x=c[5];y=c[6];
+  }
+  return points;
+}
+for(const d of DRAWINGS)d.pencil=pencilTrace(d.edge);
 const patterns=new WeakMap();
 function pencil(ctx){
   if(patterns.has(ctx))return patterns.get(ctx);
@@ -84,6 +101,15 @@ function trace(ctx,commands,center,curl,crest){
   }
 }
 function ink(ctx,color,width,alpha){ctx.save();ctx.globalAlpha*=alpha;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();ctx.restore();}
+function drawPencil(ctx,d,curl,crest){
+  ctx.beginPath();
+  for(const [a,b,gap] of d.pencil){
+    const x=a+(a-d.center)*(.16*(curl-1))*Math.max(0,1-b/155);
+    const y=b+crest*Math.max(0,1-b/175)*(1+.15*Math.sin(a*.045));
+    if(gap)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ink(ctx,'#648ea9',1.25,.64);
+}
 class OceanRenderer {
   constructor(ctx){
     this.motion=new OceanMotion();this.grain=pencil(ctx);
@@ -101,16 +127,16 @@ class OceanRenderer {
       const sy=d.scale*p.crestHeight*(1+.035*Math.sin(phase*1.17+.8*n));
       const lift=Math.sin(phase*.83+n)*p.motion,drift=Math.sin(phase*.61+n)*p.motion*.6;
       const crest=Math.sin(phase*1.29+n)*(.7+2*p.intensity);
-      ctx.save();if(n>0)ctx.globalAlpha*=p.layerPresence;ctx.translate(drift,d.base+lift);ctx.scale(1,sy);ctx.translate(0,-190);
+      ctx.save();ctx.translate(drift,d.base+lift);ctx.scale(1,sy);ctx.translate(0,-190);
       trace(ctx,d.edge,d.center,p.curl,crest);
       ctx.lineTo(390,190+(365-d.base)/sy);ctx.lineTo(-30,190+(365-d.base)/sy);ctx.closePath();
-      ctx.fillStyle=d.color;ctx.fill();ctx.fillStyle=this.grain;ctx.fill();
-      trace(ctx,d.edge,d.center,p.curl,crest);ink(ctx,'#5a94b2',1.2,.7);
+      ctx.save();if(n>0)ctx.globalAlpha*=p.layerPresence;ctx.fillStyle=d.color;ctx.fill();ctx.fillStyle=this.grain;ctx.fill();ctx.restore();
+      drawPencil(ctx,d,p.curl,crest);
       // Foam follows the curling lip, never a disconnected cloud-like cap.
       trace(ctx,d.foam,d.center,p.curl,crest);
       ctx.save();ctx.globalAlpha*=p.foamActivity;ctx.fillStyle='#fff';ctx.fill();ctx.fillStyle=this.grain;ctx.fill();ctx.restore();
       trace(ctx,d.flow,d.center,p.curl,crest);ink(ctx,'#4e91b4',1,.35+.15*p.intensity);
-      ctx.translate(.45,-.8);trace(ctx,d.edge,d.center,p.curl,crest);ink(ctx,'#609ab7',.7,.22);
+      ctx.translate(.4,-.65);drawPencil(ctx,d,p.curl,crest);
       ctx.restore();
     }
     ctx.save();ctx.translate(Math.sin(this.motion.phase[1]*.63)*.8,Math.sin(this.motion.phase[0])*.5);
