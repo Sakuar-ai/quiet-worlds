@@ -190,6 +190,7 @@ button { color: inherit; }
   .app { min-height: min(850px, calc(100svh - 40px)); border: 1.5px solid #1f2a31; border-radius: 35px; }
 }
 @media (max-height: 670px) {
+.app[data-scene="ocean"] .title-lockup h1 { font-size: 1.22rem; }
   .top-bar { min-height: 64px; padding-top: max(10px, env(safe-area-inset-top)); }
   .world { padding: 0 21px; }
   .fireplace-world { inset-inline: 21px; }
