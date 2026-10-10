@@ -1,5 +1,11 @@
 # Quiet Worlds
 
+## Ocean faithful reference-board translation — ocean-21
+
+The approved five-stage board is now the primary visual guide. A colored-pencil calm plate restores the stable sky, small clouds/birds, distant sailboat, horizontal horizon and textured sea. Three transparent rear/middle/front water strips evolve continuously over it: Calm → Light ripple → Gentle waves → Rolling waves → Lively waves. No whole-scene image swaps. Ocean adds the requested “Calm → Waves” subtitle and a bundled hand-lettered title font; the existing wave header and shell marker retain their identities. The app base remains neutral white, with only the reference’s faint local peach tone in the sky.
+
+`OceanMotion` retains integrated phases and exponential slider smoothing. Illustration images are decoded once; the background and ripple accents are cached by viewport size. Frame work is a background draw, three transformed alpha strips, and a few cached accents. Horizon and boat placement remain constant. Audio and other worlds are unchanged. Mobile QA saves all five states and verifies fixed composition, smooth dragging, asset loading, shell rail clearance and frame cost in Chromium/WebKit. [Asset files, complete generation prompts and font license](dist/art/REFERENCE-V21.md).
+
 ## Ocean continuous motion rebuild — ocean-20
 
 Replaces ocean-19's nine repeated crests / decorative landscape with three individually drawn, connected water bands. No boat, birds or clouds. Rounded asymmetric bodies, curling foam lips, a restrained pencil texture and differing rear/middle/front phases carry the scene. The existing wave-line header, shell slider, Rain-based layout, all audio and all other worlds are unchanged.

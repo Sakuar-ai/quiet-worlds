@@ -1,7 +1,7 @@
 import { FireplaceRenderer } from './fireplace.js?v=phase2a-12';
 import { FireplaceAudio, prepareFireRecording } from './fireplace-audio.js?v=fireplace-14';
-import { worldIcon } from './world-icons.js?v=ocean-20';
-import { drawOceanWorld } from './ocean.js?v=ocean-20';
+import { worldIcon } from './world-icons.js?v=ocean-21';
+import { drawOceanWorld } from './ocean.js?v=ocean-21';
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;
@@ -54,7 +54,7 @@ const SCENES = {
   ocean: {
     id: "ocean", name: "Ocean", mark: "〰〰", accent: "#5f8fab", initialIntensity: .40,
     labels: ["Calm", "Waves"], whisper: "The water keeps a rounded edge.",
-    descriptions: ["The ocean is resting.", "Rounded waves are arriving.", "The water is moving in layers."],
+    descriptions: ["Calm", "Light ripple", "Gentle waves", "Rolling waves", "Lively waves"],
     aria: "Rounded hand-drawn blue waves with playful white foam",
     audio: [
       { label: "shore hush", kind: "noise", frequency: 1200, q: .25, gain: .040 },
@@ -499,7 +499,7 @@ let toastTimeout = null;
 let playbackRequest = 0;
 
 const showToast = (message) => { const toast=$("#toast"); toast.textContent=message; toast.classList.add("show"); clearTimeout(toastTimeout); toastTimeout=setTimeout(()=>toast.classList.remove("show"),2400); };
-const intensityText = (scene, value) => scene.config.descriptions[value < .34 ? 0 : value < .7 ? 1 : 2];
+const intensityText = (scene, value) => scene.config.descriptions[scene.config.id === "ocean" ? Math.round(clamp(value) * 4) : value < .34 ? 0 : value < .7 ? 1 : 2];
 
 const timer = new Timer($("#timer-label"), () => { pause(); showToast("The timer has finished. This world is resting."); });
 const controls = new PlaybackControls($("#play-trigger"), () => current && (controls.playing ? pause() : play()));

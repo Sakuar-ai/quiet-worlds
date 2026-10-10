@@ -16,7 +16,7 @@ for(const file of ['fireplace.js','fireplace-audio.js'])assert.equal(readFileSyn
 
 const engine=process.env.OCEAN_BROWSER||'chromium';
 const root=resolve('dist'),out=engine==='webkit'?'test-results/ocean-webkit':'test-results/ocean';mkdirSync(out,{recursive:true});
-const server=createServer((req,res)=>{try{const file=resolve(root,'.'+new URL(req.url,'http://localhost').pathname.replace(/\/$/,'/index.html'));if(!file.startsWith(root+'/'))throw Error();res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'})[extname(file)]||'application/octet-stream');res.end(readFileSync(file));}catch{res.writeHead(404).end();}});
+const server=createServer((req,res)=>{try{const file=resolve(root,'.'+new URL(req.url,'http://localhost').pathname.replace(/\/$/,'/index.html'));if(!file.startsWith(root+'/'))throw Error();res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'})[extname(file)]||'application/octet-stream');res.end(readFileSync(file));}catch{res.writeHead(404).end();}});
 await new Promise(done=>server.listen(0,'127.0.0.1',done));
 const browser=await ({chromium,webkit})[engine].launch({headless:true}),report=[],shots=[];
 const rects=page=>page.evaluate(()=>Object.fromEntries(['.world','#scene-canvas','.top-bar','.scene-mark','.timer-button','.intensity-area','.controls','.play-button'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return[selector,{x:r.x,y:r.y,width:r.width,height:r.height}];})));
@@ -31,10 +31,14 @@ try{
     await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(150);
     const rain=await rects(page);
     await page.locator('#scene-trigger').click();await page.locator('[data-world="ocean"]').click();
+    await page.evaluate(async()=>{const module=await import('./ocean.js?v=ocean-21');await module.oceanAssetsReady();await document.fonts.ready;});
     await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important}'});
     await page.waitForTimeout(150);
     const oceanRects=await rects(page);
-    for(const selector of Object.keys(rain))for(const axis of ['x','y','width','height'])assert.ok(Math.abs(oceanRects[selector][axis]-rain[selector][axis])<.05,`${selector}.${axis}: same Rain geometry (allow WebKit 1/64px grid rounding)`);
+    for(const selector of Object.keys(rain))for(const axis of ['x','y','width','height']){
+      if(selector==='.scene-mark'&&axis==='y')continue; // Ocean's reference title changes only its emblem's vertical alignment.
+      assert.ok(Math.abs(oceanRects[selector][axis]-rain[selector][axis])<.05,`${selector}.${axis}: same scene/control geometry (allow WebKit 1/64px grid rounding)`);
+    }
     assert.equal(await page.locator('#scene-mark svg').getAttribute('data-world-icon'),'ocean');
     assert.equal(await page.locator('#scene-mark [data-icon-art] path').count(),1,'header is one small wave-line emblem');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');
@@ -42,6 +46,10 @@ try{
     for(const intensity of [0,.25,.5,.75,1]){
       const state=await draw(page,intensity),name=`${viewport.width}x${viewport.height}-${intensity*100}.png`;
       assert.ok(Math.abs(state.parameters.intensity-intensity)<.001,'smoothly settles at target, not an instant state swap');
+      assert.equal(state.parameters.horizonFraction,.5,'horizon stays fixed for every intensity');
+      assert.equal(state.parameters.boatFractionX,.72,'boat identity and placement stay fixed');
+      assert.equal(await page.locator('.ocean-subtitle').innerText(),'Calm → Waves');
+      assert.equal(await page.locator('#intensity-description').innerText(),['Calm','Light ripple','Gentle waves','Rolling waves','Lively waves'][Math.round(intensity*4)]);
       const inkFraction=await page.locator('#scene-canvas').evaluate(c=>{const pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let blue=0;for(let n=0;n<pixels.length;n+=4)if(pixels[n+3]>100&&pixels[n]<230&&pixels[n+2]-pixels[n]>12)blue++;return blue/(c.width*c.height);});
       assert.ok(inkFraction>.09&&inkFraction<.72,'actual blue water must be visible while preserving white paper');
       if(previous)assert.notEqual(state.pixels,previous,'every intensity stop visibly changes the water');previous=state.pixels;
@@ -85,6 +93,7 @@ try{
   const live=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,recordVideo:{dir:out+'/motion',size:{width:390,height:844}}});
   await live.goto(`http://127.0.0.1:${server.address().port}/`);
   await live.locator('#scene-trigger').click();await live.locator('[data-world="ocean"]').click();
+  await live.evaluate(async()=>{await (await import('./ocean.js?v=ocean-21')).oceanAssetsReady();await document.fonts.ready;});
   const cadence=await live.evaluate(async()=>{
     const frames=[],start=performance.now(),input=document.querySelector('#intensity-slider');let last;
     await new Promise(done=>{function watch(now){if(last)frames.push(now-last);last=now;const t=(now-start)/1000;input.value=t<2?0:t<5?(t-2)/3*1000:t<7?1000:(1-(t-7)/3)*1000;input.dispatchEvent(new Event('input',{bubbles:true}));if(t<10)requestAnimationFrame(watch);else done();}requestAnimationFrame(watch);});

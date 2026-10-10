@@ -14,7 +14,7 @@ export const OCEAN_ICON=Object.freeze({color:'#719fbd',header:`
 const clamp=v=>Math.max(0,Math.min(1,Number.isFinite(v)?v:0));
 export function oceanParameters(value){
   const i=clamp(value);
-  return {intensity:i,crestHeight:.075+.925*Math.pow(i,.8),motion:.35+1.75*i,pace:.19+.15*i,curl:.22+.78*i,foamActivity:.06+.94*Math.sqrt(i),layerPresence:.42+.58*i};
+  return {intensity:i,crestHeight:.08+.92*Math.pow(i,1.35),motion:.35+1.75*i,pace:.19+.15*i,curl:.22+.78*i,foamActivity:.06+.94*Math.sqrt(i),layerPresence:.42+.58*i};
 }
 export class OceanMotion {
   constructor(){this.last=null;this.intensity=null;this.phase=[.4,2.7,4.5];this.parameters=oceanParameters(0);}
@@ -29,121 +29,61 @@ export class OceanMotion {
     this.parameters=p;return p;
   }
 }
-// Three different asymmetrical drawings, not a repeated wave stamp. Parse once.
-const DRAWINGS=[
-  {
-    base:168,scale:.60,color:'#c2dce9',center:151,
-    edge:'M-18 183C17 185 45 174 74 153C96 138 111 108 138 102C158 96 177 104 178 116C179 125 168 129 158 125C149 124 150 137 164 147C188 165 212 176 239 171C263 167 282 148 301 146C322 142 333 158 348 168C360 176 374 176 384 171',
-    foam:'M91 141C105 124 120 108 138 103C156 97 178 104 179 116C180 125 167 131 159 125C154 122 158 118 165 119C166 114 156 111 151 114C145 118 143 112 138 116C132 121 128 116 123 121C116 120 115 132 109 130C103 129 101 141 91 141Z',
-    flow:'M51 171C81 158 101 134 115 124M150 140C169 159 190 166 207 169'
-  },
-  {
-    base:240,scale:.78,color:'#9ec9de',center:250,
-    edge:'M-18 176C12 179 32 164 49 152C69 139 91 142 106 157C123 175 161 183 188 165C212 148 228 130 226 111C225 95 218 89 220 81C212 85 204 83 211 75C216 61 232 51 248 51C268 50 282 65 294 86C307 111 310 133 332 150C349 164 365 170 384 170',
-    foam:'M203 96C202 78 217 58 235 52C259 41 280 59 291 78C301 97 307 121 315 131C306 131 303 116 297 116C290 116 294 102 287 99C280 99 281 88 275 88C268 90 267 77 261 79C253 82 253 72 246 76C239 72 234 80 229 79C221 79 222 89 215 87C211 89 211 96 203 96Z',
-    flow:'M139 178C178 174 206 156 216 138M277 112C288 143 312 164 338 169'
-  },
-  {
-    base:318,scale:1,color:'#80b5d1',center:143,
-    edge:'M-18 183C18 182 40 158 60 129C79 102 92 73 119 58C142 45 170 50 182 66C195 85 177 98 161 91C153 88 150 83 153 80C137 78 125 94 129 115C136 151 172 176 213 177C243 177 266 156 283 144C302 130 324 131 338 144C349 155 342 164 332 160C325 157 319 162 325 168C343 181 365 177 384 171',
-    foam:'M49 147C69 119 89 77 116 59C140 43 170 48 184 66C194 79 186 94 175 97C165 100 151 92 151 84C153 80 159 83 164 85C172 88 178 80 171 75C166 72 162 78 156 72C150 77 144 68 139 75C132 70 127 82 121 78C115 78 114 91 108 88C101 90 103 102 96 102C89 102 90 114 84 116C77 118 78 128 71 130C64 133 58 147 49 147Z',
-    flow:'M13 175C44 161 65 128 82 109M121 134C134 158 160 174 184 177M258 173C280 156 297 145 312 147'
-  }
-];
-function compile(d){
-  const tokens=d.match(/[MCZ]|-?[0-9]*[.]?[0-9]+/g),out=[];
-  for(let i=0;i<tokens.length;){
-    const op=tokens[i++],count=op==='C'?6:op==='M'?2:0,values=tokens.slice(i,i+count).map(Number);
-    if(!['M','C','Z'].includes(op)||values.length!==count||values.some(v=>!Number.isFinite(v)))throw new Error('Invalid Ocean curve');
-    out.push([op,...values]);i+=count;
-  }
-  return out;
+// One persistent calm plate and three depth strips, never five state images.
+// The alpha atlas is a hand-drawn layer sheet, not an animation frame sequence.
+export const OCEAN_ASSETS=Object.freeze({
+  background:'./art/ocean-reference-v21-base.webp',
+  waves:'./art/ocean-reference-v21-waves.webp',
+  sourceHorizon:853/1536,
+  rows:[[0,83,1967,154],[0,256,1967,226],[0,483,1967,307]]
+});
+let assets;
+function loadAssets(){
+  if(assets)return assets;
+  const make=path=>{const image=new Image();image.decoding='async';image.src=new URL(path,import.meta.url);return image;};
+  const background=make(OCEAN_ASSETS.background),waves=make(OCEAN_ASSETS.waves);
+  const ready=Promise.all([background.decode(),waves.decode()]);
+  assets={background,waves,ready};ready.catch(()=>{});return assets;
 }
-for(const d of DRAWINGS)for(const key of ['edge','foam','flow'])d[key]=compile(d[key]);
-// A fixed, sparse pencil trace over the filled masses. Never randomize per frame:
-// the same tiny imperfections travel with the drawing, so there is no shimmer.
-function pencilTrace(commands){
-  const points=[];let x=0,y=0,n=0;
-  for(const c of commands){
-    if(c[0]==='M'){x=c[1];y=c[2];points.push([x,y,true]);continue;}
-    if(c[0]!=='C')continue;
-    const steps=Math.max(5,Math.ceil((Math.hypot(c[1]-x,c[2]-y)+Math.hypot(c[3]-c[1],c[4]-c[2])+Math.hypot(c[5]-c[3],c[6]-c[4]))/3));
-    for(let j=1;j<=steps;j++){
-      const t=j/steps,u=1-t,px=u*u*u*x+3*u*u*t*c[1]+3*u*t*t*c[3]+t*t*t*c[5],py=u*u*u*y+3*u*u*t*c[2]+3*u*t*t*c[4]+t*t*t*c[6];
-      n++;points.push([px+Math.sin(n*2.17)*.35,py+Math.sin(n*1.73)*.48,n%29===0]);
-    }
-    x=c[5];y=c[6];
-  }
-  return points;
-}
-for(const d of DRAWINGS)d.pencil=pencilTrace(d.edge);
-const patterns=new WeakMap();
-function pencil(ctx){
-  if(patterns.has(ctx))return patterns.get(ctx);
-  const tile=ctx.canvas.ownerDocument.createElement('canvas');tile.width=128;tile.height=128;
-  const p=tile.getContext('2d');p.lineCap='round';
-  for(let n=0;n<270;n++){
-    const x=n*37.713%128,y=n*23.173%128;
-    p.strokeStyle=n%5?'rgba(255,255,255,.12)':'rgba(66,126,161,.07)';p.lineWidth=.35+n%3*.35;
-    p.beginPath();p.moveTo(x,y);p.lineTo(x+1+n%5,y-1-n%4);p.stroke();
-  }
-  const pattern=ctx.createPattern(tile,'repeat');patterns.set(ctx,pattern);return pattern;
-}
-function trace(ctx,commands,center,curl,crest){
-  // Subtle crest deformation; wave feet stay joined to the water band.
-  const x=(a,b)=>a+(a-center)*(.16*(curl-1))*Math.max(0,1-b/155);
-  const y=(a,b)=>b+crest*Math.max(0,1-b/175)*(1+.15*Math.sin(a*.045));
-  ctx.beginPath();
-  for(const c of commands){
-    if(c[0]==='M')ctx.moveTo(x(c[1],c[2]),y(c[1],c[2]));
-    else if(c[0]==='C')ctx.bezierCurveTo(x(c[1],c[2]),y(c[1],c[2]),x(c[3],c[4]),y(c[3],c[4]),x(c[5],c[6]),y(c[5],c[6]));
-    else ctx.closePath();
-  }
-}
-function ink(ctx,color,width,alpha){ctx.save();ctx.globalAlpha*=alpha;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();ctx.restore();}
-function drawPencil(ctx,d,curl,crest){
-  ctx.beginPath();
-  for(const [a,b,gap] of d.pencil){
-    const x=a+(a-d.center)*(.16*(curl-1))*Math.max(0,1-b/155);
-    const y=b+crest*Math.max(0,1-b/175)*(1+.15*Math.sin(a*.045));
-    if(gap)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-  }
-  ink(ctx,'#648ea9',1.25,.64);
-}
+export function oceanAssetsReady(){return loadAssets().ready;}
 class OceanRenderer {
-  constructor(ctx){
-    this.motion=new OceanMotion();this.grain=pencil(ctx);
-    this.mask=new Path2D('M-16 -10H376V343C326 352 283 344 239 351S140 346 102 351S29 345 -16 349Z');
-    this.ripples=new Path2D('M5 199q17 -3 31 0M66 211q13 2 23 -1M260 207q22 -3 45 -1M320 193q18 3 29 0M22 262q15 -2 25 0M143 255q19 -3 33 -1M304 269q20 -2 32 1M56 329q18 3 34 0M214 334q16 -2 30 0');
-    this.foam=new Path2D('M35 226q5 -3 10 0M143 224q3 -3 6 0M286 229q4 -2 8 0M87 293q5 -3 9 0M271 307q4 -2 7 0M187 328q4 -2 8 0');
-    this.fade=ctx.createLinearGradient(0,328,0,354);this.fade.addColorStop(0,'rgba(251,251,252,0)');this.fade.addColorStop(1,'#fbfbfc');
+  constructor(ctx){this.motion=new OceanMotion();this.images=loadAssets();this.width=0;this.height=0;this.cache=null;}
+  prepare(ctx,w,h){
+    if(this.cache&&this.width===w&&this.height===h)return;
+    const dpr=Math.min(2,ctx.canvas.width/w),canvas=ctx.canvas.ownerDocument.createElement('canvas');
+    canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+    const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
+    const im=this.images.background,split=Math.round(im.naturalHeight*OCEAN_ASSETS.sourceHorizon),horizon=h*.50,bottom=h*.97;
+    c.drawImage(im,0,0,im.naturalWidth,split,0,0,w,horizon);
+    c.drawImage(im,0,split,im.naturalWidth,im.naturalHeight-split,0,horizon,w,bottom-horizon);
+    this.cache=canvas;this.width=w;this.height=h;
+    this.ripples=new Path2D();
+    for(let n=0;n<22;n++){
+      const x=(n*97.17)%w,y=horizon+(n+.7)/22*(bottom-horizon),length=9+n%5*5;
+      this.ripples.moveTo(x,y);this.ripples.quadraticCurveTo(x+length*.45,y-.8,x+length,y+.3);
+    }
+    this.fade=ctx.createLinearGradient(0,h*.92,0,h*.985);this.fade.addColorStop(0,'rgba(251,251,252,0)');this.fade.addColorStop(1,'#fbfbfc');
   }
   draw(ctx,w,h,time,target){
-    const p=this.motion.update(time,target),s=Math.min(w/360,h*.88/370);
-    ctx.save();ctx.translate((w-360*s)/2,(h-370*s)*.5);ctx.scale(s,s);ctx.clip(this.mask);
-    ctx.lineCap='round';ctx.lineJoin='round';
+    const p=this.motion.update(time,target),{background,waves}=this.images;
+    if(!background.complete||!background.naturalWidth||!waves.complete||!waves.naturalWidth)return {...p,assetsReady:false};
+    this.prepare(ctx,w,h);ctx.drawImage(this.cache,0,0,w,h);
+    const horizon=h*.50,depth=h*.47;
+    const reveal=Math.max(0,Math.min(1,(p.intensity-.06)/.64)),presence=reveal*reveal*(3-2*reveal);
+    ctx.save();ctx.beginPath();ctx.rect(0,horizon+1,w,depth);ctx.clip();
     for(let n=0;n<3;n++){
-      const d=DRAWINGS[n],phase=this.motion.phase[n];
-      const sy=d.scale*p.crestHeight*(1+.035*Math.sin(phase*1.17+.8*n));
-      const lift=Math.sin(phase*.83+n)*p.motion,drift=Math.sin(phase*.61+n)*p.motion*.6;
-      const crest=Math.sin(phase*1.29+n)*(.7+2*p.intensity);
-      ctx.save();ctx.translate(drift,d.base+lift);ctx.scale(1,sy);ctx.translate(0,-190);
-      trace(ctx,d.edge,d.center,p.curl,crest);
-      ctx.lineTo(390,190+(365-d.base)/sy);ctx.lineTo(-30,190+(365-d.base)/sy);ctx.closePath();
-      ctx.save();if(n>0)ctx.globalAlpha*=p.layerPresence;ctx.fillStyle=d.color;ctx.fill();ctx.fillStyle=this.grain;ctx.fill();ctx.restore();
-      drawPencil(ctx,d,p.curl,crest);
-      // Foam follows the curling lip, never a disconnected cloud-like cap.
-      trace(ctx,d.foam,d.center,p.curl,crest);
-      ctx.save();ctx.globalAlpha*=p.foamActivity;ctx.fillStyle='#fff';ctx.fill();ctx.fillStyle=this.grain;ctx.fill();ctx.restore();
-      trace(ctx,d.flow,d.center,p.curl,crest);ink(ctx,'#4e91b4',1,.35+.15*p.intensity);
-      ctx.translate(.4,-.65);drawPencil(ctx,d,p.curl,crest);
+      const phase=this.motion.phase[n],row=OCEAN_ASSETS.rows[n];
+      const width=w*[1.17,1.22,1.25][n],height=depth*[.26,.34,.40][n]*p.crestHeight*(1+.025*Math.sin(phase*1.11+n));
+      const base=horizon+depth*[.29,.60,.90][n];
+      const dx=Math.sin(phase*.67+n)*p.motion,dy=Math.sin(phase*.89+n)*p.motion*.42;
+      ctx.save();ctx.globalAlpha*=presence*[.72,.89,1][n];
+      ctx.drawImage(waves,...row,(w-width)/2+dx,base-height+dy,width,height);
       ctx.restore();
     }
-    ctx.save();ctx.translate(Math.sin(this.motion.phase[1]*.63)*.8,Math.sin(this.motion.phase[0])*.5);
-    ctx.strokeStyle='#f8fcfd';ctx.lineWidth=1.25;ctx.globalAlpha*=.62;ctx.stroke(this.ripples);
-    ctx.globalAlpha*=p.foamActivity;ctx.lineWidth=1.65;ctx.stroke(this.foam);ctx.restore();
-    ctx.fillStyle=this.fade;ctx.fillRect(-16,328,392,30);
-    ctx.restore();return p;
+    ctx.save();ctx.globalAlpha*=.12+.10*p.intensity;ctx.translate(Math.sin(this.motion.phase[0])*.8,Math.sin(this.motion.phase[1])*.35);
+    ctx.strokeStyle='#fff';ctx.lineWidth=.85;ctx.stroke(this.ripples);ctx.restore();
+    ctx.fillStyle=this.fade;ctx.fillRect(0,h*.92,w,h*.08);ctx.restore();
+    return {...p,assetsReady:true,horizonFraction:.50,boatFractionX:.72,activeWaveLayers:3};
   }
 }
 const renderers=new WeakMap();

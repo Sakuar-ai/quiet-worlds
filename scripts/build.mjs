@@ -24,6 +24,8 @@ assert.ok(!/const MARKS|FIRE_MARK|worldArt\(/.test(app),'Keep both icon levels i
 assert.equal((app.match(/worldIcon\(config.id/g)||[]).length,2,'Header and picker use the same family registry');
 const {WORLD_ICONS,worldIcon}=await import('../dist/world-icons.js');
 const {oceanParameters}=await import('../dist/ocean.js');
+const {OCEAN_ASSETS}=await import('../dist/ocean.js');
+for(const key of ['background','waves'])assert.ok(existsSync('dist/'+OCEAN_ASSETS[key].replace('./','')));
 assert.ok(existsSync('dist/art/ocean-shell.svg'));
 for(let n=1;n<=100;n++)for(const key of Object.keys(oceanParameters(0))){
   assert.ok(Number.isFinite(oceanParameters(n/100)[key]));

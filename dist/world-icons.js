@@ -1,4 +1,4 @@
-import { OCEAN_ICON } from './ocean.js?v=ocean-20';
+import { OCEAN_ICON } from './ocean.js?v=ocean-21';
 // One family per world, two intentional levels: descriptive picker / simple header.
 // Keep both variants here with the same palette and gentle pencil line quality.
 const pine = (x,y,scale) => `<g transform="translate(${x} ${y}) scale(${scale})"><path d="M0 57 1 7" stroke="#967c62" stroke-width="2.8"/><path d="M1 0C-1 9-5 17-10 23l7-3-12 15 10-4-13 16 12-4-10 11c7-1 12-5 17-9 5 5 10 8 16 9L8 42l9 4L7 30l8 4L5 18l6 4Z" fill="#96aa91" stroke="#607e68" stroke-width="1.4"/><path d="M1 7 0 45M-1 20l-5 5m8-7 5 9M-1 31l-7 7m10-7 7 8M-2 42l-8 6m12-6 7 6" stroke="#617e66" stroke-width="1.25"/><path d="m-4 22 3-4m5 14 4 6m-13 6-4 4" stroke="#fff" stroke-opacity=".65" stroke-width="1.3"/></g>`;
