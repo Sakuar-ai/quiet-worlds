@@ -51,8 +51,12 @@ const DRAWINGS=[
   }
 ];
 function compile(d){
-  const tokens=d.match(/[MCZ]|-?\\d*\\.?\\d+/g),out=[];
-  for(let i=0;i<tokens.length;){const op=tokens[i++],count=op==='C'?6:op==='M'?2:0;out.push([op,...tokens.slice(i,i+count).map(Number)]);i+=count;}
+  const tokens=d.match(/[MCZ]|-?[0-9]*[.]?[0-9]+/g),out=[];
+  for(let i=0;i<tokens.length;){
+    const op=tokens[i++],count=op==='C'?6:op==='M'?2:0,values=tokens.slice(i,i+count).map(Number);
+    if(!['M','C','Z'].includes(op)||values.length!==count||values.some(v=>!Number.isFinite(v)))throw new Error('Invalid Ocean curve');
+    out.push([op,...values]);i+=count;
+  }
   return out;
 }
 for(const d of DRAWINGS)for(const key of ['edge','foam','flow'])d[key]=compile(d[key]);

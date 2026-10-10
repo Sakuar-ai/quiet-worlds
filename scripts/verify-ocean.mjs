@@ -33,7 +33,8 @@ try{
     await page.locator('#scene-trigger').click();await page.locator('[data-world="ocean"]').click();
     await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important}'});
     await page.waitForTimeout(150);
-    assert.deepEqual(await rects(page),rain,'Ocean inherits Rain scene area, spacing and control hierarchy');
+    const oceanRects=await rects(page);
+    for(const selector of Object.keys(rain))for(const axis of ['x','y','width','height'])assert.ok(Math.abs(oceanRects[selector][axis]-rain[selector][axis])<.05,`${selector}.${axis}: same Rain geometry (allow WebKit 1/64px grid rounding)`);
     assert.equal(await page.locator('#scene-mark svg').getAttribute('data-world-icon'),'ocean');
     assert.equal(await page.locator('#scene-mark [data-icon-art] path').count(),1,'header is one small wave-line emblem');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');
@@ -41,6 +42,8 @@ try{
     for(const intensity of [0,.25,.5,.75,1]){
       const state=await draw(page,intensity),name=`${viewport.width}x${viewport.height}-${intensity*100}.png`;
       assert.ok(Math.abs(state.parameters.intensity-intensity)<.001,'smoothly settles at target, not an instant state swap');
+      const inkFraction=await page.locator('#scene-canvas').evaluate(c=>{const pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let blue=0;for(let n=0;n<pixels.length;n+=4)if(pixels[n+3]>100&&pixels[n]<230&&pixels[n+2]-pixels[n]>12)blue++;return blue/(c.width*c.height);});
+      assert.ok(inkFraction>.09&&inkFraction<.72,'actual blue water must be visible while preserving white paper');
       if(previous)assert.notEqual(state.pixels,previous,'every intensity stop visibly changes the water');previous=state.pixels;
       const rail=await page.locator('#range-ink').evaluate(e=>{const b=e.getBoundingClientRect(),s=p=>getComputedStyle(e,p);return {width:b.width,before:parseFloat(s('::before').width),after:parseFloat(s('::after').left)};});
       const center=intensity*(rail.width-25)+12.5;
@@ -48,7 +51,7 @@ try{
       assert.ok(Math.abs(rail.after-(center+14))<.1,'rail resumes after shell');
       const png=await page.screenshot({path:`${out}/${name}`});
       if(viewport.width===390)shots.push({intensity,png:png.toString('base64')});
-      report.push({viewport,intensity,parameters:state.parameters,railGap:28,layoutMatchesRain:true});
+      report.push({viewport,intensity,parameters:state.parameters,inkFraction,railGap:28,layoutMatchesRain:true});
     }
     const a=await draw(page,.5),b=await draw(page,.5);assert.notEqual(a.pixels,b.pixels,'live gentle movement');
     const performanceReport=await page.evaluate(()=>{
